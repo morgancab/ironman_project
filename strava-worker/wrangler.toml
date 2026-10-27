@@ -9,6 +9,6 @@ id = "149198b10a2147c3a52546b901f957b8"
 [vars]
 # Domaine (https://…) où l'app est HÉBERGÉE, sans chemin : seul ce site pourra appeler l'API.
 # Ne mets pas file:/// ici (ça ne marche pas depuis un iPhone) ; « * » est possible pour un premier test.
-ALLOWED_ORIGIN = "*"
+ALLOWED_ORIGIN = "https://ironmanproject.vercel.app"
 # Première date récupérée
-SINCE = "2027-01-01"
+SINCE = "2026-01-01"

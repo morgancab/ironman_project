@@ -805,18 +805,18 @@ function vActs(){
   var sv=state.sv,h='<section class="card"><div class="row"><h2 style="margin:0">Garmin</h2><span class="sp"></span>';
   if(!(sv.url&&sv.key))
     return h+'</div><p class="small muted" style="margin:8px 0 12px">Connecte ton compte Garmin (via intervals.icu) : tes séances se cocheront toutes seules à partir de tes activités, sans rien saisir.</p><button class="btn pri" data-act="settings" style="margin:0">Configurer la synchronisation</button></section>';
-  var acts=(sv.acts||[]).filter(function(a){return dayIdx(a)>=-7;}).sort(function(x,y){return y.s>x.s?1:-1;});
+  var acts=(sv.acts||[]).slice().sort(function(x,y){return y.s>x.s?1:-1;});
   var chip=sv.err?'Hors ligne':sv.werr?'Problème':sv.conn===false?'Non connecté':'Connecté';
   h+='<span class="chip">'+chip+'</span></div>';
   h+='<p class="small muted" style="margin:8px 0 12px">'+(sv.conn===false&&!sv.werr?'Aucune synchro réussie pour l’instant : vérifie la clé intervals.icu (Réglages). ':'Mise à jour automatique après chaque activité synchronisée par Garmin. ')+'Dernière synchro : '+ago(sv.t)+(sv.err?' · '+esc(sv.err):'')+(sv.werr?' · '+esc(sv.werr):'')+'</p>';
-  var un=acts.filter(function(a){return actSport(a)&&LK.a2s[a.id]===undefined;}).length;
+  var un=acts.filter(function(a){return actSport(a)&&dayIdx(a)>=0&&LK.a2s[a.id]===undefined;}).length;
   if(un)h+='<p class="small" style="margin:0 0 10px"><b>'+un+' activité'+(un>1?'s':'')+' non associée'+(un>1?'s':'')+'</b> <span class="muted">(trop courte ou sans séance équivalente). Touche-la pour l’associer.</span></p>';
   acts.slice(0,6).forEach(function(a){
-    var sid=LK.a2s[a.id],s=sid&&SBY[sid],lab=!actSport(a)?'Non suivie':s?'→ '+sessLabel(s):sid===0?'Ignorée':'Non associée';
+    var sid=LK.a2s[a.id],s=sid&&SBY[sid],lab=!actSport(a)?'Non suivie':dayIdx(a)<0?'Avant le plan':s?'→ '+sessLabel(s):sid===0?'Ignorée':'Non associée';
     h+='<button class="srow" data-act="picksess" data-aid="'+esc(a.id)+'"><span class="sr-t"><b>'+esc(a.n||a.t)+'</b><small>'+esc(actDate(a)+' · '+actLine(a))+'</small></span><span class="sr-b'+(s?' ok':'')+'">'+esc(lab)+'</span></button>';
   });
   if(!acts.length)h+='<p class="small muted" style="margin:0 0 10px">Aucune activité pour l’instant.</p>';
-  return h+'<button class="btn" data-act="syncsv" style="margin:4px 0 0">Synchroniser maintenant</button><p class="small muted" style="margin:8px 0 0">Données Garmin Connect via intervals.icu</p></section>';
+  return h+'<button class="btn" data-act="allacts" style="margin:4px 0 8px">Toutes mes activités ('+acts.length+')</button><button class="btn" data-act="syncsv" style="margin:4px 0 0">Synchroniser maintenant</button><p class="small muted" style="margin:8px 0 0">Données Garmin Connect via intervals.icu</p></section>';
 }
 function nextSession(wk){
   var t=today(),i,j;
@@ -1041,6 +1041,7 @@ document.addEventListener('click',function(e){
   else if(a==='unlink'){state.links[d.aid]=0;save();closeSheet();render(true);toast('Activité dissociée');}
   else if(a==='autolink'){delete state.links[d.aid];save();closeSheet();render(true);toast('Association automatique rétablie');}
   else if(a==='syncsv')syncActs(true,true);
+  else if(a==='allacts')openAllActs();
   else if(a==='svresync')svResync();
   else if(a==='settings')openSheet();
   else if(a==='closesheet')closeSheet();
@@ -1141,6 +1142,29 @@ function openPickSess(aid){
   }
   showSheet('Associer à une séance',a.n+' · '+actDate(a),b);
 }
+function openAllActs(){
+  var acts=((state.sv.acts)||[]).slice().sort(function(x,y){return y.s>x.s?1:-1;}),tot={swim:[0,0,0],bike:[0,0,0],run:[0,0,0],str:[0,0,0]};
+  acts.forEach(function(a){var k=actSport(a);if(k){tot[k][0]++;tot[k][1]+=a.d;tot[k][2]+=a.m;}});
+  var b='';
+  if(!acts.length)b='<p class="muted">Aucune activité reçue pour l’instant. Vérifie que Garmin est bien connecté dans intervals.icu, puis touche « Synchroniser maintenant ».</p>';
+  else{
+    b+='<div class="card" style="background:var(--card2);margin:0 0 14px">';
+    [['swim','Natation'],['bike','Vélo'],['run','Course à pied'],['str','Renforcement']].forEach(function(r){
+      var t=tot[r[0]];
+      b+='<div class="spr sp-'+r[0]+'"><div class="ico">'+ic(r[0],20)+'</div><div class="bd"><div class="pr-h" style="margin:0"><b>'+r[1]+'</b><span>'+t[0]+' séance'+(t[0]>1?'s':'')+' · '+fh(Math.round(t[1]/60))+(t[2]?' · '+km(t[2])+' km':'')+'</span></div></div></div>';
+    });
+    b+='</div>';
+    var cur='';
+    acts.forEach(function(a){
+      var d=plLocal(a.s);if(!d)return;
+      var mo=MONTHS_L[d.getMonth()]+' '+d.getFullYear();
+      if(mo!==cur){cur=mo;b+='<h4>'+mo+'</h4>';}
+      var k=actSport(a),sid=LK.a2s[a.id],s=sid&&SBY[sid],lab=s?'→ '+sessLabel(s):(k?SPN[k]:(a.t||'Autre')),inner='<span class="sr-t"><b>'+esc(a.n||a.t)+'</b><small>'+esc(actDate(a)+' · '+actLine(a))+'</small></span><span class="sr-b'+(s?' ok':'')+'">'+esc(lab)+'</span>';
+      b+=dayIdx(a)>=0&&k?'<button class="srow" data-act="picksess" data-aid="'+esc(a.id)+'">'+inner+'</button>':'<div class="srow">'+inner+'</div>';
+    });
+  }
+  showSheet('Mes activités',acts.length+' activité'+(acts.length>1?'s':'')+' depuis janvier 2026',b);
+}
 function setLink(aid,sid){
   var L=state.links;
   Object.keys(L).forEach(function(k){if(L[k]===sid&&k!==String(aid))delete L[k];});
@@ -1157,7 +1181,7 @@ function syncActs(force,loud){
   var sv=state.sv;if(!sv.url||!sv.key||syncing)return;
   if(!force&&Date.now()-(sv.t||0)<60000)return;
   syncing=true;
-  svFetch('/api/activities?since='+isoDate(addDays(PLAN_START,-7)))
+  svFetch('/api/activities?since='+'2026-01-01')
     .then(function(r){if(!r.ok)throw new Error(r.status===401?'Clé invalide':'Erreur serveur ('+r.status+')');return r.json();})
     .then(function(j){
       var acts=j.activities||[],changed=JSON.stringify(acts)!==JSON.stringify(sv.acts||[])||sv.conn!==!!j.connected||!!sv.err||(sv.werr||'')!==(j.error||'');
