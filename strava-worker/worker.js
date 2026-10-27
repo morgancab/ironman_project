@@ -11,6 +11,10 @@
 //   POST /api/sync                          force une relecture d'intervals.icu
 //   GET  /api/status                        état de la connexion
 //   GET  /api/activity?id=i123              détail d'une activité : séries/tours, courbes (FC, vitesse, altitude), découpage par km
+//   GET|POST|PUT|DELETE /api/events[/<id>]       calendrier d'intervals.icu : séances planifiées (envoyées ensuite vers Garmin par intervals.icu)
+//   GET  /api/event-file?id=..&ext=fit      export d'une séance planifiée (fichier de séance Garmin .fit / .zwo), en base64
+//   PUT  /api/sport-settings/<id>           modifie un réglage de sport d'intervals.icu (seuil d'allure…)
+//   GET  /api/sport-settings                réglages par sport d'intervals.icu (seuils, zones) : lecture seule
 //   GET  /api/debug                         diagnostic : champs bruts de la 1re activité (sans données personnelles longues)
 //
 // Secrets  : INTERVALS_API_KEY (intervals.icu → Réglages → Developer Settings), APP_KEY (clé choisie, saisie dans l'app)
@@ -36,6 +40,10 @@ async function route(req, env) {
         if (url.pathname === '/api/activities' && req.method === 'GET') return cors(env, await apiActivities(url, env));
         if (url.pathname === '/api/status' && req.method === 'GET') return cors(env, await apiStatus(env));
         if (url.pathname === '/api/sync' && req.method === 'POST') return cors(env, await apiSync(env));
+        if (url.pathname.startsWith('/api/events')) return apiEvents(req, url, env);
+        if (url.pathname === '/api/event-file' && req.method === 'GET') return apiEventFile(url, env);
+        if (url.pathname.startsWith('/api/sport-settings/') && req.method === 'PUT') return apiSportSettingsPut(req, url, env);
+        if (url.pathname === '/api/sport-settings' && req.method === 'GET') return json((await intervalsReq(env, 'GET', `/athlete/${encodeURIComponent(env.INTERVALS_ATHLETE_ID || '0')}/sport-settings`)).data);
         if (url.pathname === '/api/activity' && req.method === 'GET') return cors(env, await apiActivity(url, env));
         if (url.pathname === '/api/debug' && req.method === 'GET') return cors(env, await apiDebug(env));
         return cors(env, json({ error: 'not_found' }, 404));
@@ -84,6 +92,37 @@ function ymd(d) {
 }
 
 /* ---------- intervals.icu ---------- */
+// requête quelconque (POST/PUT/DELETE) vers intervals.icu
+async function intervalsReq(env, method, path, body) {
+  if (!env.INTERVALS_API_KEY) throw new Error('INTERVALS_API_KEY manquante');
+  const r = await fetch(BASE + path, {
+    method,
+    headers: { Authorization: 'Basic ' + btoa('API_KEY:' + env.INTERVALS_API_KEY), Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'ironman-2027-app/1.0' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await r.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (e) { data = { raw: text.slice(0, 300) }; }
+  return { status: r.status, data };
+}
+// Calendrier d'intervals.icu : GET (liste), POST (créer une ou plusieurs séances), DELETE /api/events/<id>
+async function apiEvents(req, url, env) {
+  const id = encodeURIComponent(env.INTERVALS_ATHLETE_ID || '0');
+  const rest = url.pathname.slice('/api/events'.length).replace(/^\//, '').replace(/[^\w-]/g, '');
+  let r;
+  if (req.method === 'GET') {
+    const o = (url.searchParams.get('oldest') || '').slice(0, 10), n = (url.searchParams.get('newest') || '').slice(0, 10);
+    r = await intervalsReq(env, 'GET', `/athlete/${id}/events?oldest=${o}&newest=${n}`);
+  } else if (req.method === 'POST') {
+    const body = await req.json();
+    r = await intervalsReq(env, 'POST', `/athlete/${id}/events${Array.isArray(body) ? '/bulk?upsert=uid' : ''}`, body);
+  } else if (req.method === 'PUT' && rest) {
+    r = await intervalsReq(env, 'PUT', `/athlete/${id}/events/${rest}`, await req.json());
+  } else if (req.method === 'DELETE' && rest) {
+    r = await intervalsReq(env, 'DELETE', `/athlete/${id}/events/${rest}`);
+  } else return json({ error: 'not_found' }, 404);
+  return json(r.data === null ? { ok: r.status < 300 } : r.data, r.status);
+}
 async function fetchIntervals(env, path) {
   const id = encodeURIComponent(env.INTERVALS_ATHLETE_ID || '0');
   return intervalsGet(env, `/athlete/${id}${path}`);
@@ -276,4 +315,28 @@ async function apiActivity(url, env) {
   const out = buildDetail(d, st);
   await env.KV.put('det2:' + id, JSON.stringify(out), { expirationTtl: 60 * 86400 });
   return json(out);
+}
+
+// Export d'une séance planifiée tel que le génère intervals.icu (lecture seule) : base64 dans un JSON
+async function apiEventFile(url, env) {
+  const id = (url.searchParams.get('id') || '').replace(/[^\w-]/g, '');
+  const ext = (url.searchParams.get('ext') || 'fit').replace(/[^a-z]/g, '');
+  if (!id) return json({ error: 'id manquant' }, 400);
+  if (!env.INTERVALS_API_KEY) return json({ error: 'INTERVALS_API_KEY manquante' }, 500);
+  const a = encodeURIComponent(env.INTERVALS_ATHLETE_ID || '0');
+  const r = await fetch(`${BASE}/athlete/${a}/events/${id}/download.${ext}`, { headers: { Authorization: 'Basic ' + btoa('API_KEY:' + env.INTERVALS_API_KEY), 'User-Agent': 'ironman-2027-app/1.0' } });
+  const buf = new Uint8Array(await r.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  return json({ status: r.status, type: r.headers.get('Content-Type'), size: buf.length, base64: r.ok ? btoa(bin) : null, text: r.ok ? null : new TextDecoder().decode(buf).slice(0, 300) }, r.ok ? 200 : r.status);
+}
+
+// Réglages par sport : seuil d'allure, zones… (intervals.icu n'exporte les cibles d'allure vers Garmin que si le seuil d'allure est renseigné)
+async function apiSportSettingsPut(req, url, env) {
+  const sid = url.pathname.slice('/api/sport-settings/'.length).replace(/[^\d]/g, '');
+  if (!sid) return json({ error: 'id manquant' }, 400);
+  const body = await req.json();
+  const a = encodeURIComponent(env.INTERVALS_ATHLETE_ID || '0');
+  const r = await intervalsReq(env, 'PUT', `/athlete/${a}/sport-settings/${sid}`, body);
+  return json(r.data === null ? { ok: r.status < 300 } : r.data, r.status);
 }

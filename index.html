@@ -426,9 +426,12 @@ var WU_RUN='Échauffement 10 min : 5 min très facile {r:soft} + 5 min en zone 2
 var STRIDES='3 accélérations de 15 s progressives jusqu’à ~90 % de ta vitesse max, récup 45 s au pas';
 
 /* ---- Natation ---- */
-function swimSession(title,tag,goal,segs,sum,extra){
+// wk = séance structurée (syntaxe d'intervals.icu) : les cibles {S:..} {B:..} {R:..} sont remplacées à l'envoi (voir wkTgt)
+function WK(a){return a.join('\n');}
+function repW(n,work,rest){return n>1?(n-1)+'x\n'+work+'\n'+rest+'\n\n'+work:work;}
+function swimSession(title,tag,goal,segs,sum,extra,wk){
   var tot=0,lines=[];segs.forEach(function(s){lines.push(s[0]);tot+=s[1];});
-  return S('swim',title,tag,Math.max(15,R5(tot*22/1000)),lines.concat(extra||[]),{m:tot,sum:sum,goal:goal});
+  return S('swim',title,tag,Math.max(15,R5(tot*22/1000)),lines.concat(extra||[]),{m:tot,sum:sum,goal:goal,wk:wk});
 }
 function swimA(w,kind,ph,t){
   var n;
@@ -437,7 +440,8 @@ function swimA(w,kind,ph,t){
     return swimSession('Natation · Technique douce','Récup','Garder la sensation d’eau sans fatigue : nage longue, relâchée.',[
       ['Échauffement 500 m : 300 m souple {s:easy} + 4 × 50 m éducatifs (rattrapé, poings fermés), récup 15 s',500],
       ['Corps de séance : '+n+' × 100 m crawl très aisé {s:easy}, récup 15 s. Compte tes mouvements de bras par longueur et garde-le stable',n*100],
-      ['Retour au calme 100 m : dos ou nage libre souple',100]],n+' × 100 m très aisé');
+      ['Retour au calme 100 m : dos ou nage libre souple',100]],n+' × 100 m très aisé',undefined,
+      WK(['Warmup','- 500mtr {S:easy}','','Main',repW(n,'- 100mtr {S:easy}','- 15s rest'),'','Cooldown','- 100mtr {S:easy}']));
   }
   if(kind==='taper'){
     n=Math.max(2,Math.round((t-900)/400));
@@ -445,7 +449,8 @@ function swimA(w,kind,ph,t){
       ['Échauffement 400 m souple, dont 4 × 50 m progressifs (de facile à rapide), récup 15 s',400],
       ['Corps de séance : '+n+' × 400 m à allure Ironman {s:im}, récup 30 s. Chaque 400 m au même temps (±3 s)',n*400],
       ['6 × 50 m vifs {s:fast}, récup 20 s : garde la sensation d’eau',300],
-      ['Retour au calme 200 m souple {s:easy}',200]],n+' × 400 m allure Ironman');
+      ['Retour au calme 200 m souple {s:easy}',200]],n+' × 400 m allure Ironman',undefined,
+      WK(['Warmup','- 400mtr {S:easy}','','Main',repW(n,'- 400mtr {S:im}','- 30s rest'),'',repW(6,'- 50mtr {S:fast}','- 20s rest'),'','Cooldown','- 200mtr {S:easy}']));
   }
   if(ph==='base'){
     n=Math.max(3,Math.round((t-600)/200));
@@ -453,7 +458,8 @@ function swimA(w,kind,ph,t){
       ['Échauffement 500 m : 300 m souple {s:easy} + 4 × 50 m éducatifs (rattrapé, poings fermés, 6 temps), récup 15 s',500],
       ['Corps de séance : '+n+' × 200 m crawl aisé {s:end}, récup 20 s. Objectif : même temps sur chaque 200 m',n*200],
       ['Retour au calme 100 m souple',100]],n+' × 200 m aisé',
-      ['Points techniques : entrée de main dans l’alignement de l’épaule, expiration complète dans l’eau, rotation des hanches']);
+      ['Points techniques : entrée de main dans l’alignement de l’épaule, expiration complète dans l’eau, rotation des hanches'],
+      WK(['Warmup','- 500mtr {S:easy}','','Main',repW(n,'- 200mtr {S:end}','- 20s rest'),'','Cooldown','- 100mtr {S:easy}']));
   }
   if(ph==='dev'){
     n=Math.max(2,Math.round((t-1200)/200));
@@ -461,14 +467,16 @@ function swimA(w,kind,ph,t){
       ['Échauffement 400 m : 200 m souple + 4 × 50 m progressifs',400],
       ['Série 1 : 6 × 100 m rapide {s:css}, récup 20 s. Les 6 temps à 2 s près',600],
       ['Série 2 : '+n+' × 200 m allure soutenue {s:im}, récup 20 s',n*200],
-      ['Retour au calme 200 m souple {s:easy}',200]],'6 × 100 rapide + '+n+' × 200 soutenu');
+      ['Retour au calme 200 m souple {s:easy}',200]],'6 × 100 rapide + '+n+' × 200 soutenu',undefined,
+      WK(['Warmup','- 400mtr {S:easy}','','Série 1',repW(6,'- 100mtr {S:css}','- 20s rest'),'','Série 2',repW(n,'- 200mtr {S:im}','- 20s rest'),'','Cooldown','- 200mtr {S:easy}']));
   }
   n=Math.max(3,Math.round((t-600)/400));
   return swimSession('Natation · Allure Ironman','Spécifique','Installer le rythme du jour J : régulier, économique, tenable 3,8 km.',[
     ['Échauffement 400 m : 200 m souple + 4 × 50 m progressifs',400],
     ['Corps de séance : '+n+' × 400 m régulier à allure Ironman {s:im}, récup 30 s. Chaque 400 m au même temps (±3 s)',n*400],
     ['Retour au calme 200 m souple {s:easy}',200]],n+' × 400 m allure Ironman',
-    ['Sur le dernier 400 m : rythme de course et repérage (tête levée toutes les 8–10 mouvements)']);
+    ['Sur le dernier 400 m : rythme de course et repérage (tête levée toutes les 8–10 mouvements)'],
+    WK(['Warmup','- 400mtr {S:easy}','','Main',repW(n,'- 400mtr {S:im}','- 30s rest'),'','Cooldown','- 200mtr {S:easy}']));
 }
 function swimB(w,kind,ph,t){
   var n;
@@ -477,7 +485,8 @@ function swimB(w,kind,ph,t){
     return swimSession('Natation · Endurance douce','Récup','Entretenir l’endurance de nage sans fatigue.',[
       ['Échauffement 300 m souple {s:easy}',300],
       ['Corps de séance : '+n+' × 200 m aisé {s:easy}, récup 15 s, pull-buoy optionnel',n*200],
-      ['Retour au calme 100 m souple',100]],n+' × 200 m aisé');
+      ['Retour au calme 100 m souple',100]],n+' × 200 m aisé',undefined,
+      WK(['Warmup','- 300mtr {S:easy}','','Main',repW(n,'- 200mtr {S:easy}','- 15s rest'),'','Cooldown','- 100mtr {S:easy}']));
   }
   if(kind==='taper'){
     n=Math.max(2,Math.round((t-500)/500));
@@ -485,7 +494,8 @@ function swimB(w,kind,ph,t){
       ['Échauffement 300 m souple {s:easy}',300],
       ['Corps de séance : '+n+' × 500 m régulier à allure Ironman {s:im}, récup 30 s',n*500],
       ['Retour au calme 200 m souple',200]],n+' × 500 m allure Ironman',
-      ['Idéal en mer ou dans le chenal, en combinaison, accompagné et avec une bouée de sécurité']);
+      ['Idéal en mer ou dans le chenal, en combinaison, accompagné et avec une bouée de sécurité'],
+      WK(['Warmup','- 300mtr {S:easy}','','Main',repW(n,'- 500mtr {S:im}','- 30s rest'),'','Cooldown','- 200mtr {S:easy}']));
   }
   if(ph==='base'){
     n=Math.max(3,Math.round((t-400)/300));
@@ -493,7 +503,8 @@ function swimB(w,kind,ph,t){
       ['Échauffement 300 m souple {s:easy}',300],
       ['Corps de séance : '+n+' × 300 m crawl continu {s:end}, récup 30 s',n*300],
       ['Retour au calme 100 m souple',100]],n+' × 300 m continu',
-      ['Dernière série en pull-buoy si tu veux travailler le gainage']);
+      ['Dernière série en pull-buoy si tu veux travailler le gainage'],
+      WK(['Warmup','- 300mtr {S:easy}','','Main',repW(n,'- 300mtr {S:end}','- 30s rest'),'','Cooldown','- 100mtr {S:easy}']));
   }
   if(ph==='dev'){
     n=Math.max(3,Math.round((t-1000)/400));
@@ -501,7 +512,8 @@ function swimB(w,kind,ph,t){
       ['Échauffement 400 m souple varié (crawl, dos, éducatifs)',400],
       ['Série 1 : '+n+' × 400 m crawl {s:end}, récup 30 s. Chaque 400 m un peu plus vite que le précédent si tu le sens',n*400],
       ['Série 2 : 2 × 200 m en pull-buoy {s:end}, récup 20 s',400],
-      ['Retour au calme 200 m souple',200]],n+' × 400 m + 2 × 200 pull');
+      ['Retour au calme 200 m souple',200]],n+' × 400 m + 2 × 200 pull',undefined,
+      WK(['Warmup','- 400mtr {S:easy}','','Série 1',repW(n,'- 400mtr {S:end}','- 30s rest'),'','Série 2',repW(2,'- 200mtr {S:end}','- 20s rest'),'','Cooldown','- 200mtr {S:easy}']));
   }
   n=Math.max(3,Math.round((t-500)/600));
   return swimSession('Natation · Eau libre / chenal','Spécifique','Reproduire la natation du jour J : repérage, houle, groupe, combinaison.',[
@@ -510,7 +522,8 @@ function swimB(w,kind,ph,t){
     ['Retour au calme 200 m souple',200]],n+' × 600 m en eau libre',
     ['Idéal : mer ou chenal, avec ta combinaison, toujours accompagné et avec une bouée de sécurité',
      'En mer, raisonne à la durée : 600 m ≈ 12–15 min. Repérage tête levée toutes les 8–10 mouvements, respiration bilatérale, départs en groupe, virages de bouée',
-     'Sans accès à l’eau libre : même séance en piscine, tête levée 1 mouvement sur 8 pour simuler le repérage']);
+     'Sans accès à l’eau libre : même séance en piscine, tête levée 1 mouvement sur 8 pour simuler le repérage'],
+    WK(['Warmup','- 300mtr {S:easy}','','Main',repW(n,'- 600mtr {S:im}','- 30s rest'),'','Cooldown','- 200mtr {S:easy}']));
 }
 
 /* ---- Renforcement ---- */
@@ -536,73 +549,82 @@ function strength(w,kind,ph,t){
 
 /* ---- Vélo ---- */
 function bikeMid(w,kind,ph,t){
-  var WU=15,CD=10,main=t-WU-CD,b,eff,title,tag,sum,goal,extra=[];
+  var WU=15,CD=10,main=t-WU-CD,b,eff,title,tag,sum,goal,extra=[],mainW;
   if(kind==='rec')
-    return S('bike','Vélo · Sortie souple','Récup',t,['Toute la sortie en endurance facile {b:soft}, cadence 90 tr/min : '+t+' min','Au milieu : 6 × 20 s de cadence vive (100 tr/min et plus), sans forcer, récup 40 s','Route plate ou home-trainer'],{sum:t+' min facile',goal:'Faire circuler les jambes pour récupérer.'});
-  if(kind==='taper'){b=blocks(main,6,3,4);title='Vélo · Activation';tag='Affûtage';goal='Garder les jambes vives et affûtées avant la course.';eff='Corps de séance : '+b.n+' × 6 min à allure Ironman {b:im}, récup 3 min facile {b:soft}';sum=b.n+' × 6 min allure Ironman';}
-  else if(ph==='base'){b=blocks(main,8,4,6);title='Vélo · Cadence & force-endurance';tag='Qualité';goal='Gagner en force musculaire spécifique : pousser un gros braquet sans fatigue cardio.';eff='Corps de séance : '+b.n+' × 8 min en force-endurance {b:ft}, assis, 60–70 tr/min, récup 4 min à 90 tr/min {b:soft}';sum=b.n+' × 8 min force-endurance';}
-  else if(ph==='dev'){var len=w<=12?10:15;b=blocks(main,len,5,w<=12?4:3);title='Vélo · Sweet spot';tag='Qualité';goal='Relever ta puissance soutenable : le travail le plus rentable avant la phase spécifique.';eff='Corps de séance : '+b.n+' × '+len+' min en sweet spot {b:sw}, cadence 85–95 tr/min, récup 5 min facile {b:soft}';sum=b.n+' × '+len+' min sweet spot';}
-  else{b=blocks(main,20,5,3);title='Vélo · Position aéro, allure Ironman';tag='Spécifique';goal='Tenir l’allure Ironman en position aéro, régulier et relâché.';eff='Corps de séance : '+b.n+' × 20 min en position aéro à allure Ironman {b:im}, cadence 85–90 tr/min, récup 5 min facile {b:soft}';sum=b.n+' × 20 min aéro allure Ironman';extra=['Contrôle : dos plat, tête haute, regard à 10 m, épaules et mains relâchées. Une gorgée toutes les 10 min'];}
-  return S('bike',title,tag,t,[WU_BIKE,eff].concat(fill(b,'Complète en endurance {b:z2} : {x} min'),extra,[CD_BIKE,'Home-trainer ou route']),{sum:sum,goal:goal});
+    return S('bike','Vélo · Sortie souple','Récup',t,[t+' min en endurance facile {b:soft}, cadence 90 tr/min','Au milieu : 6 × 20 s de cadence vive (100 tr/min et plus), sans forcer, récup 40 s','Route plate ou home-trainer'],{sum:t+' min facile',goal:'Faire circuler les jambes pour récupérer.',wk:WK(['Main','- '+t+'m {B:soft}'])});
+  if(kind==='taper'){b=blocks(main,6,3,4);title='Vélo · Activation';tag='Affûtage';goal='Garder les jambes vives et affûtées avant la course.';eff='Corps de séance : '+b.n+' × 6 min à allure Ironman {b:im}, récup 3 min facile {b:soft}';sum=b.n+' × 6 min allure Ironman';mainW=repW(b.n,'- 6m {B:im}','- 3m {B:soft}');}
+  else if(ph==='base'){b=blocks(main,8,4,6);title='Vélo · Cadence & force-endurance';tag='Qualité';goal='Gagner en force musculaire spécifique : pousser un gros braquet sans fatigue cardio.';eff='Corps de séance : '+b.n+' × 8 min en force-endurance {b:ft}, assis, 60–70 tr/min, récup 4 min à 90 tr/min {b:soft}';sum=b.n+' × 8 min force-endurance';mainW=repW(b.n,'- 8m {B:ft}','- 4m {B:soft}');}
+  else if(ph==='dev'){var len=w<=12?10:15;b=blocks(main,len,5,w<=12?4:3);title='Vélo · Sweet spot';tag='Qualité';goal='Relever ta puissance soutenable : le travail le plus rentable avant la phase spécifique.';eff='Corps de séance : '+b.n+' × '+len+' min en sweet spot {b:sw}, cadence 85–95 tr/min, récup 5 min facile {b:soft}';sum=b.n+' × '+len+' min sweet spot';mainW=repW(b.n,'- '+len+'m {B:sw}','- 5m {B:soft}');}
+  else{b=blocks(main,20,5,3);title='Vélo · Position aéro, allure Ironman';tag='Spécifique';goal='Tenir l’allure Ironman en position aéro, régulier et relâché.';eff='Corps de séance : '+b.n+' × 20 min en position aéro à allure Ironman {b:im}, cadence 85–90 tr/min, récup 5 min facile {b:soft}';sum=b.n+' × 20 min aéro allure Ironman';mainW=repW(b.n,'- 20m {B:im}','- 5m {B:soft}');extra=['Contrôle : dos plat, tête haute, regard à 10 m, épaules et mains relâchées. Une gorgée toutes les 10 min'];}
+  var wk=WK(['Warmup','- 10m {B:soft}','- 5m {B:z2}','','Main',mainW].concat(b.fill>=8?['','- '+b.fill+'m {B:z2}']:[],['','Cooldown','- 10m {B:soft}']));
+  return S('bike',title,tag,t,[WU_BIKE,eff].concat(fill(b,'Complète en endurance {b:z2} : {x} min'),extra,[CD_BIKE,'Home-trainer ou route']),{sum:sum,goal:goal,wk:wk});
 }
 function bikeLong(w,kind,ph,t){
   var b,len,blk;
   if(kind==='rec')
-    return S('bike','Vélo · Sortie longue souple','Récup',t,['Toute la sortie en endurance facile {b:z2}, cadence 85–95 tr/min : '+fm(t),'Route plate : profite, ne cherche aucune performance','Nutrition : 40–60 g de glucides par heure et 500 ml d’eau par heure'],{sum:fm(t)+' facile',goal:'Garder le volume en abaissant la fatigue.'});
+    return S('bike','Vélo · Sortie longue souple','Récup',t,['Toute la sortie en endurance facile {b:z2}, cadence 85–95 tr/min : '+fm(t),'Route plate : profite, ne cherche aucune performance','Nutrition : 40–60 g de glucides par heure et 500 ml d’eau par heure'],{sum:fm(t)+' facile',goal:'Garder le volume en abaissant la fatigue.',wk:WK(['Main','- '+t+'m {B:z2}'])});
   if(kind==='taper'){
     b=blocks(t-45,20,10,w===23?2:1);
     return S('bike','Vélo · Sortie longue allégée','Affûtage',t,['Échauffement 30 min en endurance {b:z2}, cadence 90 tr/min',
       'Corps de séance : '+b.n+' × 20 min à allure Ironman {b:im} en position aéro'+(b.n>1?', récup 10 min facile {b:soft}':''),
-      'Reste de la sortie en endurance facile {b:z2}','Nutrition : applique exactement ton plan de course (60–90 g de glucides/h, 500–750 ml/h)'],{sum:fm(t)+' dont '+b.n+' × 20 min allure Ironman',goal:'Dernière validation de l’allure et de la nutrition de course, sans fatigue.'});
+      'Reste de la sortie en endurance facile {b:z2}','Nutrition : applique exactement ton plan de course (60–90 g de glucides/h, 500–750 ml/h)'],{sum:fm(t)+' dont '+b.n+' × 20 min allure Ironman',goal:'Dernière validation de l’allure et de la nutrition de course, sans fatigue.',
+      wk:WK(['Warmup','- 30m {B:z2}','','Main',repW(b.n,'- 20m {B:im}','- 10m {B:soft}'),'','- '+Math.max(5,t-30-(b.n*20+(b.n-1)*10))+'m {B:z2}'])});
   }
   if(ph==='base'){
     var aero=w<=4?10:w<=8?15:20;
     return S('bike','Vélo · Sortie longue d’endurance','Endurance',t,['Toute la sortie en endurance {b:z2} : '+fm(t)+'. Tu dois pouvoir tenir une conversation',
       'Cadence fluide 85–95 tr/min, relances douces en côte (assis)','Position aéro : '+aero+' min cumulées en tout (par tranches de 5 min), pas plus, pour habituer le dos et la nuque',
-      'Nutrition : 60 g de glucides par heure (≈ 1 gel ou ½ barre toutes les 20 min) + 500 ml d’eau par heure'],{sum:fm(t)+' endurance',goal:'Construire la base d’endurance aérobie et les tendons.'});
+      'Nutrition : 60 g de glucides par heure (≈ 1 gel ou ½ barre toutes les 20 min) + 500 ml d’eau par heure'],{sum:fm(t)+' endurance',goal:'Construire la base d’endurance aérobie et les tendons.',wk:WK(['Main','- '+t+'m {B:z2}'])});
   }
   if(ph==='dev'){
     len=w<=10?20:w<=12?25:30;
     b=blocks(t-45,len,10,3);
     return S('bike','Vélo · Endurance + blocs allure Ironman','Long',t,['Échauffement 30 min en endurance {b:z2}, cadence 90 tr/min',
       'Corps de séance : '+b.n+' × '+len+' min à allure Ironman {b:im} en position aéro, récup 10 min facile {b:soft}','Entre et après les blocs : endurance {b:z2}',
-      'Nutrition : 60 à 90 g de glucides par heure (≈ 20–25 g toutes les 20 min) + 500–750 ml/h. Teste ton plan de course'],{sum:fm(t)+' dont '+b.n+' × '+len+' min allure Ironman',goal:'Apprendre à rouler à allure Ironman en position aéro tout en mangeant.'});
+      'Nutrition : 60 à 90 g de glucides par heure (≈ 20–25 g toutes les 20 min) + 500–750 ml/h. Teste ton plan de course'],{sum:fm(t)+' dont '+b.n+' × '+len+' min allure Ironman',goal:'Apprendre à rouler à allure Ironman en position aéro tout en mangeant.',
+      wk:WK(['Warmup','- 30m {B:z2}','','Main',repW(b.n,'- '+len+'m {B:im}','- 10m {B:soft}'),'','- '+Math.max(5,t-30-(b.n*len+(b.n-1)*10))+'m {B:z2}'])});
   }
   blk=R5(Math.min(150,t*0.45)/2);
   return S('bike','Vélo · Sortie longue spécifique','Spécifique',t,['Échauffement 45 min en endurance {b:z2}',
     'Corps de séance : 2 × '+blk+' min à allure Ironman {b:im} en position aéro, récup 15 min facile {b:soft} entre les blocs','Fin de sortie : endurance facile {b:z2}, cadence 90 tr/min',
     'Régularité : puissance stable, pas d’à-coups (variabilité faible). Mange 20–25 g de glucides toutes les 20 min',
     'Nutrition = plan de course exact (boisson, gels, sel : 60–90 g de glucides/h, 500–750 ml/h). Matériel de course : vélo, position, roues',
-    'Si possible sur un parcours exposé au vent pour t’habituer aux rafales côtières'],{sum:fm(t)+' dont 2 × '+blk+' min allure Ironman',goal:'Répétition générale : tenir l’allure et la nutrition sur de longues durées.'});
+    'Si possible sur un parcours exposé au vent pour t’habituer aux rafales côtières'],{sum:fm(t)+' dont 2 × '+blk+' min allure Ironman',goal:'Répétition générale : tenir l’allure et la nutrition sur de longues durées.',
+    wk:WK(['Warmup','- 45m {B:z2}','','Main',repW(2,'- '+blk+'m {B:im}','- 15m {B:soft}'),'','- '+Math.max(5,t-45-(2*blk+15))+'m {B:z2}'])});
 }
 function brick(w,kind,ph,t){
   var base='Brick · Enchaînement vélo-course';
-  if(kind==='taper')return S('brick',base,'Affûtage',t,[t+' min de course facile {r:z2} juste après le vélo, avec 3 accélérations de 20 s','Transition rapide (moins de 3 min)'],{sum:t+' min facile',goal:'Garder le réflexe de l’enchaînement sans fatigue.'});
-  if(ph==='base')return S('brick',base,'Brick',t,[t+' min de course à pied tout de suite après le vélo (transition < 3 min), allure facile {r:z2}','Foulée courte, cadence vive : les jambes sont lourdes, c’est normal','Prépare tes chaussures de course à portée de main avant de partir'],{sum:t+' min facile',goal:'Habituer les jambes au passage vélo → course.'});
-  if(ph==='dev')return S('brick',base,'Brick',t,[t+' min à allure Ironman {r:im} juste après le vélo','Les 5 premières minutes : laisse les jambes se débloquer, ne pars pas trop vite','Transition rapide : chaussures de course, casquette, c’est parti'],{sum:t+' min allure Ironman',goal:'Trouver ton allure Ironman à pied sur jambes fatiguées.'});
-  return S('brick',base,'Spécifique',t,[t+' min à allure Ironman {r:im} juste après le vélo','Simule la transition T2 : casque, chaussures, casquette, nutrition','Cadence 170–180 pas/min, foulée courte, relâché'],{sum:t+' min allure Ironman',goal:'Reproduire le départ du marathon : régulier dès les premiers mètres.'});
+  if(kind==='taper')return S('brick',base,'Affûtage',t,[t+' min de course facile {r:z2} juste après le vélo, avec 3 accélérations de 20 s','Transition rapide (moins de 3 min)'],{sum:t+' min facile',goal:'Garder le réflexe de l’enchaînement sans fatigue.',wk:WK(['Main','- '+t+'m {R:z2}'])});
+  if(ph==='base')return S('brick',base,'Brick',t,[t+' min de course à pied tout de suite après le vélo (transition < 3 min), allure facile {r:z2}','Foulée courte, cadence vive : les jambes sont lourdes, c’est normal','Prépare tes chaussures de course à portée de main avant de partir'],{sum:t+' min facile',goal:'Habituer les jambes au passage vélo → course.',wk:WK(['Main','- '+t+'m {R:z2}'])});
+  if(ph==='dev')return S('brick',base,'Brick',t,[t+' min à allure Ironman {r:im} juste après le vélo','Les 5 premières minutes : laisse les jambes se débloquer, ne pars pas trop vite','Transition rapide : chaussures de course, casquette, c’est parti'],{sum:t+' min allure Ironman',goal:'Trouver ton allure Ironman à pied sur jambes fatiguées.',wk:WK(['Main','- '+t+'m {R:im}'])});
+  return S('brick',base,'Spécifique',t,[t+' min à allure Ironman {r:im} juste après le vélo','Simule la transition T2 : casque, chaussures, casquette, nutrition','Cadence 170–180 pas/min, foulée courte, relâché'],{sum:t+' min allure Ironman',goal:'Reproduire le départ du marathon : régulier dès les premiers mètres.',wk:WK(['Main','- '+t+'m {R:im}'])});
 }
 
 /* ---- Course à pied ---- */
 function runMid(w,kind,ph,t){
   var b,main;
-  if(kind==='rec')return S('run','Course · Footing souple','Récup',t,['Footing très facile {r:soft} : '+t+' min. Tu peux parler sans effort','Fin de séance : 4 × 15 s de lignes droites relâchées, récup 45 s'],{sum:t+' min facile',goal:'Relancer la circulation, sans stress musculaire.'});
+  if(kind==='rec')return S('run','Course · Footing souple','Récup',t,['Footing très facile {r:soft} : '+t+' min. Tu peux parler sans effort','Fin de séance : 4 × 15 s de lignes droites relâchées, récup 45 s'],{sum:t+' min facile',goal:'Relancer la circulation, sans stress musculaire.',wk:WK(['Main','- '+t+'m {R:soft}'])});
   if(kind==='taper'){main=t-20;b=blocks(main,4,2,4);
-    return S('run','Course · Footing & rythme','Affûtage',t,[WU_RUN,'Corps de séance : '+b.n+' × 4 min à allure Ironman {r:im}, récup 2 min au trot {r:soft}'].concat(fill(b,'Complète en footing facile {r:z2} : {x} min'),['Retour au calme 10 min facile {r:soft}']),{sum:b.n+' × 4 min allure Ironman',goal:'Garder le rythme de course sans fatigue.'});}
-  if(ph==='base')return S('run','Course · Footing & lignes droites','Endurance',t,[WU_RUN,'Footing en endurance {r:z2} : '+(t-25)+' min','6 × 20 s de lignes droites relâchées (~90 % de ta vitesse max), récup 40 s au trot','Retour au calme 5 min'],{sum:(t-25)+' min endurance + 6 lignes droites',goal:'Entretenir l’endurance et la vivacité de foulée.'});
+    return S('run','Course · Footing & rythme','Affûtage',t,[WU_RUN,'Corps de séance : '+b.n+' × 4 min à allure Ironman {r:im}, récup 2 min au trot {r:soft}'].concat(fill(b,'Complète en footing facile {r:z2} : {x} min'),['Retour au calme 10 min facile {r:soft}']),{sum:b.n+' × 4 min allure Ironman',goal:'Garder le rythme de course sans fatigue.',
+      wk:WK(['Warmup','- 5m {R:soft}','- 5m {R:z2}','','Main',repW(b.n,'- 4m {R:im}','- 2m {R:soft}')].concat(b.fill>=8?['','- '+b.fill+'m {R:z2}']:[],['','Cooldown','- 10m {R:soft}']))});}
+  if(ph==='base')return S('run','Course · Footing & lignes droites','Endurance',t,[WU_RUN,'Footing en endurance {r:z2} : '+(t-25)+' min','6 × 20 s de lignes droites relâchées (~90 % de ta vitesse max), récup 40 s au trot','Retour au calme 5 min'],{sum:(t-25)+' min endurance + 6 lignes droites',goal:'Entretenir l’endurance et la vivacité de foulée.',
+    wk:WK(['Warmup','- 5m {R:soft}','- 5m {R:z2}','','Main','- '+(t-20)+'m {R:z2}','','Cooldown','- 5m {R:soft}'])});
   if(ph==='dev'){main=t-25;b=blocks(main,8,2,4);
-    return S('run','Course · Tempo','Qualité',t,[WU_RUN,'Corps de séance : '+b.n+' × 8 min à allure tempo {r:tempo}, soutenue mais contrôlée, récup 2 min au trot {r:soft}'].concat(fill(b,'Complète en footing facile {r:z2} : {x} min'),['Retour au calme 10 min facile {r:soft}']),{sum:b.n+' × 8 min tempo',goal:'Relever l’allure que tu peux tenir longtemps (seuil aérobie).'});}
+    return S('run','Course · Tempo','Qualité',t,[WU_RUN,'Corps de séance : '+b.n+' × 8 min à allure tempo {r:tempo}, soutenue mais contrôlée, récup 2 min au trot {r:soft}'].concat(fill(b,'Complète en footing facile {r:z2} : {x} min'),['Retour au calme 10 min facile {r:soft}']),{sum:b.n+' × 8 min tempo',goal:'Relever l’allure que tu peux tenir longtemps (seuil aérobie).',
+      wk:WK(['Warmup','- 10m {R:soft}','- 5m {R:z2}','','Main',repW(b.n,'- 8m {R:tempo}','- 2m {R:soft}')].concat(b.fill>=8?['','- '+b.fill+'m {R:z2}']:[],['','Cooldown','- 10m {R:soft}']))});}
   main=t-25;b=blocks(main,10,2,4);
-  return S('run','Course · Allure Ironman','Spécifique',t,[WU_RUN,'Corps de séance : '+b.n+' × 10 min à allure Ironman {r:im}, récup 2 min au trot {r:soft}','Cadence 170–180 pas/min, foulée courte, relâché'].concat(fill(b,'Complète en footing facile {r:z2} : {x} min'),['Retour au calme 10 min facile {r:soft}']),{sum:b.n+' × 10 min allure Ironman',goal:'Ancrer l’allure du marathon Ironman : régulière et économique.'});
+  return S('run','Course · Allure Ironman','Spécifique',t,[WU_RUN,'Corps de séance : '+b.n+' × 10 min à allure Ironman {r:im}, récup 2 min au trot {r:soft}','Cadence 170–180 pas/min, foulée courte, relâché'].concat(fill(b,'Complète en footing facile {r:z2} : {x} min'),['Retour au calme 10 min facile {r:soft}']),{sum:b.n+' × 10 min allure Ironman',goal:'Ancrer l’allure du marathon Ironman : régulière et économique.',
+    wk:WK(['Warmup','- 10m {R:soft}','- 5m {R:z2}','','Main',repW(b.n,'- 10m {R:im}','- 2m {R:soft}')].concat(b.fill>=8?['','- '+b.fill+'m {R:z2}']:[],['','Cooldown','- 10m {R:soft}']))});
 }
 function runLong(w,kind,ph,t){
   var blk;
-  if(kind==='rec')return S('run','Course · Sortie longue facile','Récup',t,['Endurance très facile {r:soft} : '+fm(t),'Marche autorisée si besoin, aucune pression sur l’allure'],{sum:fm(t)+' très facile',goal:'Conserver l’endurance en récupérant.'});
-  if(kind==='taper')return S('run','Course · Sortie longue allégée','Affûtage',t,['Endurance facile {r:z2} : '+fm(t),'Fin de sortie : 4 × 20 s de lignes droites relâchées'],{sum:fm(t)+' facile',goal:'Rester en rythme sans entamer la fraîcheur.'});
-  if(ph==='base')return S('run','Course · Sortie longue','Long',t,['Endurance {r:z2} : '+fm(t)+', allure conversation','Marche d’1 min autorisée toutes les 15–20 min si besoin : ça protège les tendons','Terrain : alterne route et chemin pour varier les appuis','Emporte de l’eau (400–500 ml par heure)'],{sum:fm(t)+' endurance',goal:'Construire la résistance musculaire et tendineuse.'});
-  if(ph==='dev')return S('run','Course · Sortie longue progressive','Long',t,['Durée totale '+fm(t),(t-25)+' min en endurance {r:z2}','Puis 20 min en progressif jusqu’à l’allure tempo {r:tempo}','Dernières 5 min : retour au calme {r:soft}'],{sum:fm(t)+' dont 20 min progressif',goal:'Apprendre à finir plus vite qu’on a commencé.'});
+  if(kind==='rec')return S('run','Course · Sortie longue facile','Récup',t,['Endurance très facile {r:soft} : '+fm(t),'Marche autorisée si besoin, aucune pression sur l’allure'],{sum:fm(t)+' très facile',goal:'Conserver l’endurance en récupérant.',wk:WK(['Main','- '+t+'m {R:soft}'])});
+  if(kind==='taper')return S('run','Course · Sortie longue allégée','Affûtage',t,['Endurance facile {r:z2} : '+fm(t),'Fin de sortie : 4 × 20 s de lignes droites relâchées'],{sum:fm(t)+' facile',goal:'Rester en rythme sans entamer la fraîcheur.',wk:WK(['Main','- '+t+'m {R:z2}'])});
+  if(ph==='base')return S('run','Course · Sortie longue','Long',t,['Endurance {r:z2} : '+fm(t)+', allure conversation','Marche d’1 min autorisée toutes les 15–20 min si besoin : ça protège les tendons','Terrain : alterne route et chemin pour varier les appuis','Emporte de l’eau (400–500 ml par heure)'],{sum:fm(t)+' endurance',goal:'Construire la résistance musculaire et tendineuse.',wk:WK(['Main','- '+t+'m {R:z2}'])});
+  if(ph==='dev')return S('run','Course · Sortie longue progressive','Long',t,['Durée totale '+fm(t),(t-25)+' min en endurance {r:z2}','Puis 20 min en progressif jusqu’à l’allure tempo {r:tempo}','Dernières 5 min : retour au calme {r:soft}'],{sum:fm(t)+' dont 20 min progressif',goal:'Apprendre à finir plus vite qu’on a commencé.',wk:WK(['Main','- '+(t-25)+'m {R:z2}','- 20m {R:tempo}','- 5m {R:soft}'])});
   blk=R5(t*0.2);
-  return S('run','Course · Longue allure Ironman','Spécifique',t,['Durée totale '+fm(t)+', sur jambes déjà fatiguées par le vélo long de la veille','Échauffement 15 min facile {r:z2}','Corps de séance : 2 × '+blk+' min à allure Ironman {r:im}, récup 5 min au trot {r:soft}','Reste de la sortie en footing facile {r:z2}, cadence 170–180 pas/min','Nutrition : 30–60 g de glucides/h et 400–500 ml/h, comme le jour J'],{sum:fm(t)+' dont 2 × '+blk+' min allure Ironman',goal:'Reproduire la fatigue du marathon Ironman en gardant une foulée propre.'});
+  return S('run','Course · Longue allure Ironman','Spécifique',t,['Durée totale '+fm(t)+', sur jambes déjà fatiguées par le vélo long de la veille','Échauffement 15 min facile {r:z2}','Corps de séance : 2 × '+blk+' min à allure Ironman {r:im}, récup 5 min au trot {r:soft}','Reste de la sortie en footing facile {r:z2}, cadence 170–180 pas/min','Nutrition : 30–60 g de glucides/h et 400–500 ml/h, comme le jour J'],{sum:fm(t)+' dont 2 × '+blk+' min allure Ironman',goal:'Reproduire la fatigue du marathon Ironman en gardant une foulée propre.',
+    wk:WK(['Warmup','- 15m {R:z2}','','Main',repW(2,'- '+blk+'m {R:im}','- 5m {R:soft}'),'','- '+Math.max(5,t-15-(2*blk+5))+'m {R:z2}'])});
 }
 function restDay(w){
   return S('rest','Repos complet','Récup',0,['Sommeil 8 h si possible, hydratation, repas équilibrés : c’est là que tu progresses','Option : 10 min de mobilité douce ou d’étirements','Pas de cardio aujourd’hui'].concat(w===NW?['Dernière bonne nuit de la semaine : garde ta routine habituelle']:[]),{sum:'Récupération totale',goal:'Absorber la charge de la semaine.'});
@@ -610,13 +632,13 @@ function restDay(w){
 function raceDays(){
   return [
     [restDay(NW)],
-    [swimSession('Natation · Rappel de vitesse','Affûtage','Réveiller la nage sans fatigue.',[['Échauffement 400 m souple {s:easy}',400],['4 × 200 m à allure Ironman {s:im}, récup 30 s',800],['4 × 50 m vifs {s:fast}, récup 20 s',200],['Retour au calme 200 m souple',200]],'4 × 200 m + 4 × 50 vif'),
+    [swimSession('Natation · Rappel de vitesse','Affûtage','Réveiller la nage sans fatigue.',[['Échauffement 400 m souple {s:easy}',400],['4 × 200 m à allure Ironman {s:im}, récup 30 s',800],['4 × 50 m vifs {s:fast}, récup 20 s',200],['Retour au calme 200 m souple',200]],'4 × 200 m + 4 × 50 vif',undefined,WK(['Warmup','- 400mtr {S:easy}','','Main',repW(4,'- 200mtr {S:im}','- 30s rest'),'',repW(4,'- 50mtr {S:fast}','- 20s rest'),'','Cooldown','- 200mtr {S:easy}'])),
      S('str','Mobilité & gainage léger','Léger',15,['Circuit × 1 : planche 30 s, gainage latéral 20 s/côté, pont fessier × 12','Mobilité douce : hanches, chevilles, épaules'],{sum:'Gainage + mobilité',goal:'Détendre le corps.'})],
-    [S('bike','Vélo · Activation','Affûtage',45,[WU_BIKE,'3 × 4 min à allure Ironman {b:im}, récup 3 min facile','3 × 20 s d’accélérations en cadence vive (110 tr/min)',CD_BIKE,'Vérifie ton vélo : pneus (pression), freins, transmission, batterie des dérailleurs'],{sum:'3 × 4 min allure Ironman',goal:'Dernier réglage des sensations et du matériel.'})],
-    [S('run','Course · Dernier footing','Affûtage',30,['10 min de footing facile {r:z2}','4 × 20 s de lignes droites relâchées, récup 1 min','Retour au calme 10 min facile {r:soft}'],{sum:'30 min facile + 4 lignes droites',goal:'Se sentir léger, sans fatiguer.'})],
-    [S('swim','Natation · Rinçage','Affûtage',20,['15 à 20 min dans l’eau, très souple {s:easy} : repère le site de départ, la sortie, les bouées','En mer ou dans le chenal si les conditions le permettent','Retrait du dossard, briefing, dépôt des sacs : selon le programme officiel de l’épreuve'],{m:800,sum:'20 min souple en eau libre',goal:'Repérer les lieux et se détendre.'})],
-    [S('bike','Vélo · Dernier réglage','Affûtage',20,['10 min facile {b:soft} + 3 × 1 min à allure Ironman {b:im}','Dépôt du vélo et des sacs de transition selon le programme officiel','Repas riche en glucides (8–10 g/kg sur les dernières 24 h, éprouvé à l’entraînement), hydratation, nuit longue'],{sum:'20 min, 3 × 1 min allure Ironman',goal:'Vérifier que tout fonctionne la veille.'}),
-     S('run','Course · Rappel','Affûtage',10,['5 min facile {r:soft} + 3 × 20 s de lignes droites relâchées','Prépare tes affaires de course : check-list complète'],{sum:'10 min facile',goal:'Activer les jambes.'})],
+    [S('bike','Vélo · Activation','Affûtage',45,[WU_BIKE,'3 × 4 min à allure Ironman {b:im}, récup 3 min facile','3 × 20 s d’accélérations en cadence vive (110 tr/min)',CD_BIKE,'Vérifie ton vélo : pneus (pression), freins, transmission, batterie des dérailleurs'],{sum:'3 × 4 min allure Ironman',goal:'Dernier réglage des sensations et du matériel.',wk:WK(['Warmup','- 10m {B:soft}','- 5m {B:z2}','','Main',repW(3,'- 4m {B:im}','- 3m {B:soft}'),'','Cooldown','- 10m {B:soft}'])})],
+    [S('run','Course · Dernier footing','Affûtage',30,['10 min de footing facile {r:z2}','4 × 20 s de lignes droites relâchées, récup 1 min','Retour au calme 10 min facile {r:soft}'],{sum:'30 min facile + 4 lignes droites',goal:'Se sentir léger, sans fatiguer.',wk:WK(['Main','- 20m {R:z2}','- 10m {R:soft}'])})],
+    [S('swim','Natation · Rinçage','Affûtage',20,['15 à 20 min dans l’eau, très souple {s:easy} : repère le site de départ, la sortie, les bouées','En mer ou dans le chenal si les conditions le permettent','Retrait du dossard, briefing, dépôt des sacs : selon le programme officiel de l’épreuve'],{m:800,sum:'20 min souple en eau libre',goal:'Repérer les lieux et se détendre.',wk:WK(['Main','- 800mtr {S:easy}'])})],
+    [S('bike','Vélo · Dernier réglage','Affûtage',20,['10 min facile {b:soft} + 3 × 1 min à allure Ironman {b:im}','Dépôt du vélo et des sacs de transition selon le programme officiel','Repas riche en glucides (8–10 g/kg sur les dernières 24 h, éprouvé à l’entraînement), hydratation, nuit longue'],{sum:'20 min, 3 × 1 min allure Ironman',goal:'Vérifier que tout fonctionne la veille.',wk:WK(['Warmup','- 10m {B:soft}','','Main',repW(3,'- 1m {B:im}','- 1m {B:soft}'),'','Cooldown','- 5m {B:soft}'])}),
+     S('run','Course · Rappel','Affûtage',10,['5 min facile {r:soft} + 3 × 20 s de lignes droites relâchées','Prépare tes affaires de course : check-list complète'],{sum:'10 min facile',goal:'Activer les jambes.',wk:WK(['Main','- 10m {R:z2}'])})],
     [S('race','IRONMAN DES SABLES D’OLONNE','Jour J',0,[
       'Avant le départ : petit-déjeuner 2 h 30 à 3 h avant (1–2 g de glucides/kg, éprouvé à l’entraînement), 500 ml de boisson jusqu’à 1 h avant, un gel 15 min avant',
       'Natation 3,8 km : place-toi sur ton rythme {s:im}, nage long et régulier, repère-toi toutes les 8–10 mouvements',
@@ -912,6 +934,138 @@ function autoSummary(){
   if(ap.imSwim)s+=' · nage ≈ '+mmss(ap.imSwim)+' /100 m';
   return s+'.';
 }
+/* ---------- Séances structurées → calendrier intervals.icu → Garmin Connect → montre ----------
+   Chaque séance du plan est décrite par étapes (syntaxe d’intervals.icu) avec des cibles de zone de FC ou d’allure
+   tirées de tes données (autoProf). Intervals.icu transmet ensuite la semaine à venir à Garmin Connect. */
+// Intervals.icu n'exporte vers Garmin que les cibles de FC (zones) : l'allure / la vitesse est donc écrite dans le NOM de l'étape
+// (ex. « 6'40-7'05/km »), affiché sur la montre, et la cible réelle de l'étape est une zone de FC.
+function pq(s){return mmss(s).replace(':',"'");}
+function swimRange(k){
+  var ap=autoProf(),p=state.ui.prof||{},im=ap&&ap.imSwim;if(!im)return null;
+  var cs=p.css||ap.css||im-10;
+  return {easy:[im+6,im+14],end:[im,im+6],im:[im-3,im+3],css:[cs-1,cs+1],fast:[cs-6,cs-2]}[k]||null;
+}
+function wkTgt(t,k){
+  if(t==='R')return {soft:'Z1 HR',z2:'Z2 HR',tempo:'Z4 HR',im:'Z1-Z2 HR'}[k]||'';   // allure Ironman : FC en plafond (zone 2 max)
+  if(t==='B')return {soft:'Z1 HR',z2:'Z2 HR',ft:'Z3 HR',sw:'Z4 HR',im:'Z2 HR'}[k]||'';
+  return '';
+}
+function wkLab(t,k){
+  var ap=autoProf();if(!ap)return '';
+  if(t==='R'){
+    if(k==='im')return ap.imRun?pq(ap.imRun*0.97)+'-'+pq(ap.imRun*1.03)+'/km':'';
+    var hz=ap.hz,d={soft:[0,hz[0]],z2:[hz[0]+1,hz[1]],tempo:[hz[2]+1,hz[3]]}[k];
+    if(!d||!ap.runAt)return '';
+    var pa=ap.runAt(d[1]),pb=ap.runAt(d[0]||d[1]-10);
+    if(!pa||!pb)return '';
+    return k==='soft'?pq(pa)+'+/km':pq(pa)+'-'+pq(pb)+'/km';
+  }
+  if(t==='B'){
+    var fl={im:1,ft:1.03,sw:1.10}[k];
+    if(fl&&ap.imBike){var vl=ap.imBike*fl;return Math.round(vl*0.95)+'-'+Math.round(vl*1.05)+'km/h';}
+    var z={z2:2,ft:3,sw:4}[k];
+    if(z&&ap.bikeAt){var sa=ap.bikeAt(ap.hz[z-2]+1),sb=ap.bikeAt(ap.hz[z-1]);if(sa&&sb)return Math.round(sa)+'-'+Math.round(sb)+'km/h';}
+    return '';
+  }
+  if(t==='S'){var r=swimRange(k);return r?pq(r[0])+'-'+pq(r[1])+'/100':'';}
+  return '';
+}
+// Allure CIBLE (vraie cible de vitesse sur la montre) : course (blocs tempo et allure Ironman) et natation (tous les blocs).
+// Prérequis côté intervals.icu : le « seuil d’allure » du sport (et ses zones d’allure) doit être renseigné, sinon l’allure est supprimée à l’export Garmin.
+function wkPace(t,k){
+  if(t==='S'){var sr=swimRange(k);return sr?mmss(sr[0])+'-'+mmss(sr[1])+'/100m Pace':'';}
+  if(t==='B'){var apb=autoProf(),fb={im:1,ft:1.03,sw:1.10}[k];if(!apb||!apb.imBike||!fb)return '';var vb=apb.imBike*fb;return mmss(3600/(vb*1.05))+'-'+mmss(3600/(vb*0.95))+'/km Pace';}
+  var ap=autoProf();if(t!=='R'||!ap)return '';
+  var a,b;
+  if(k==='im'&&ap.imRun){a=ap.imRun*0.97;b=ap.imRun*1.03;}
+  else if(k==='tempo'&&ap.runAt){a=ap.runAt(ap.hz[3]);b=ap.runAt(ap.hz[2]+1);}
+  if(!a||!b)return '';
+  return mmss(a)+'-'+mmss(b)+'/km Pace';
+}
+function wkText(wk){
+  return wk.split('\n').filter(function(l){var t=l.trim();return !t||t.charAt(0)==='-'||/^\d+x$/.test(t)||/^(warmup|cooldown)$/i.test(t);}).map(function(l){
+    var m=/^(\s*-\s)(\d+(?:m|s|mtr|km))\s+\{([RBS]):(\w+)\}\s*$/.exec(l);
+    if(m){var pc=wkPace(m[3],m[4]),lab=wkLab(m[3],m[4]);if(pc)return m[1]+(m[3]==='S'&&lab?lab+' ':'')+m[2]+' '+pc;var tg=wkTgt(m[3],m[4]);return m[1]+(lab?lab+' ':'')+m[2]+(tg?' '+tg:'');}
+    return l.replace(/\{([RBS]):(\w+)\}/g,function(_,t,k){return wkTgt(t,k);}).replace(/\s+$/,'');
+  }).join('\n');
+}
+function evOf(s){
+  var d=addDays(PLAN_START,sessIdx(s)),type={swim:'Swim',bike:'Ride',run:'Run',brick:'Run',str:'WeightTraining'}[s.sp];
+  return {category:'WORKOUT',start_date_local:isoDate(d)+'T00:00:00',type:type,name:s.title,description:s.wk?wkText(s.wk):s.lines.map(function(l){return tx(l);}).join('\n'),external_id:'im27:'+s.id};
+}
+var pushing=false;
+function pushRange(fi,ti,loud){
+  var sv=state.sv;
+  if(!sv.url||!sv.key){if(loud)toast('Configure d’abord la synchronisation (Réglages)');return Promise.resolve(null);}
+  if(pushing)return Promise.resolve(null);
+  var list=ALLS.filter(function(s){var i=sessIdx(s);return i>=fi&&i<=ti&&s.sp!=='race'&&!isDone(s);});
+  pushing=true;
+  var o=isoDate(addDays(PLAN_START,fi)),n=isoDate(addDays(PLAN_START,ti));
+  return svFetch('/api/events?oldest='+o+'&newest='+n).then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);return r.json();}).then(function(ex){
+    var by={},want={},ops=[],cnt={c:0,u:0,d:0},chain=Promise.resolve();
+    (Array.isArray(ex)?ex:[]).forEach(function(e){if(e.external_id&&String(e.external_id).indexOf('im27:')===0)by[e.external_id]=e;});
+    list.forEach(function(s){
+      var ev=evOf(s),e=by[ev.external_id];want[ev.external_id]=1;
+      if(!e)ops.push(['POST','/api/events',ev,'c']);
+      else if(e.description!==ev.description||e.name!==ev.name||e.type!==ev.type||String(e.start_date_local).slice(0,10)!==ev.start_date_local.slice(0,10))ops.push(['PUT','/api/events/'+e.id,ev,'u']);
+    });
+    Object.keys(by).forEach(function(k){if(!want[k])ops.push(['DELETE','/api/events/'+by[k].id,null,'d']);});
+    ops.forEach(function(op){chain=chain.then(function(){return svFetch(op[1],{method:op[0],headers:{'Content-Type':'application/json'},body:op[2]?JSON.stringify(op[2]):undefined}).then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);cnt[op[3]]++;});});});
+    return chain.then(function(){return cnt;});
+  }).then(function(c){
+    pushing=false;state.ui.lastPush=Date.now();save();
+    if(loud)toast(!(c.c+c.u+c.d)?(list.length?'Déjà à jour : '+list.length+' séance'+(list.length>1?'s':'')+' dans ton calendrier':'Aucune séance à envoyer sur cette période'):c.c+' envoyée'+(c.c>1?'s':'')+(c.u?' · '+c.u+' mise'+(c.u>1?'s':'')+' à jour':'')+(c.d?' · '+c.d+' retirée'+(c.d>1?'s':''):''));
+    return c;
+  }).catch(function(e){pushing=false;var m=(e&&e.message)||'Échec';if(loud)toast(m==='Failed to fetch'||m==='Load failed'?'Serveur injoignable':m);return null;});
+}
+/* Semaine d’essai : la semaine 1 du plan est envoyée sur les 6 prochains jours, marquée [ESSAI], pour voir à quoi ressemblent les séances sur la montre */
+function previewList(){return ALLS.filter(function(s){return s.w===1&&s.sp!=='race';});}
+function previewOps(){
+  var sv=state.sv,t1=addDays(today(),1),o=isoDate(t1),n=isoDate(addDays(t1,32));
+  return svFetch('/api/events?oldest='+o+'&newest='+n).then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);return r.json();}).then(function(ex){
+    return (Array.isArray(ex)?ex:[]).filter(function(e){return e.external_id&&String(e.external_id).indexOf('im27prev:')===0;});
+  });
+}
+function runOps(ops){
+  var chain=Promise.resolve();
+  ops.forEach(function(op){chain=chain.then(function(){return svFetch(op[0],{method:op[1],headers:{'Content-Type':'application/json'},body:op[2]?JSON.stringify(op[2]):undefined}).then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);});});});
+  return chain;
+}
+function errTxt(e){var m=(e&&e.message)||'Échec';return m==='Failed to fetch'||m==='Load failed'?'Serveur injoignable':m;}
+function pushPreview(){
+  if(!state.sv.url||!state.sv.key){toast('Configure d’abord la synchronisation (Réglages)');return Promise.resolve();}
+  if(pushing)return Promise.resolve();
+  pushing=true;toast('Envoi de la semaine d’essai…');
+  var t1=addDays(today(),1);
+  return previewOps().then(function(old){
+    var ops=old.map(function(e){return ['/api/events/'+e.id,'DELETE',null];});
+    previewList().forEach(function(s){
+      var ev=evOf(s);
+      ev.start_date_local=isoDate(addDays(t1,Math.max(0,s.d-1)))+'T00:00:00';
+      ev.name='[ESSAI] '+s.title;ev.external_id='im27prev:'+s.id;
+      ops.push(['/api/events','POST',ev]);
+    });
+    return runOps(ops).then(function(){return ops.filter(function(o){return o[1]==='POST';}).length;});
+  }).then(function(n){pushing=false;toast(n+' séances d’essai envoyées du '+fmtDay(t1)+' au '+fmtDay(addDays(t1,5)));})
+    .catch(function(e){pushing=false;toast(errTxt(e));});
+}
+function clearPreview(){
+  if(!state.sv.url||!state.sv.key||pushing)return Promise.resolve();
+  pushing=true;
+  return previewOps().then(function(old){return runOps(old.map(function(e){return ['/api/events/'+e.id,'DELETE',null];})).then(function(){return old.length;});})
+    .then(function(n){pushing=false;toast(n?n+' séance'+(n>1?'s':'')+' d’essai retirée'+(n>1?'s':''):'Aucune séance d’essai à retirer');})
+    .catch(function(e){pushing=false;toast(errTxt(e));});
+}
+function pushWindow(loud){var t0=Math.max(0,diffDays(today(),PLAN_START));return pushRange(t0,t0+13,loud);}
+function maybeAutoPush(){if(state.ui.autopush&&Date.now()-(state.ui.lastPush||0)>6*3600*1000&&diffDays(RACE_DATE,today())>=0)pushWindow(false);}
+function pushSettings(){
+  var on=!!state.ui.autopush;
+  return '<h4>Envoi des séances vers Garmin</h4><p>Chaque séance est envoyée par étapes (échauffement, séries, cibles d’allure ou de zone de FC) dans ton calendrier intervals.icu, qui la transmet à Garmin Connect puis à ta montre (réglage « Upload planned workouts » d’intervals.icu). Une séance faite disparaît du calendrier.</p>'+
+    '<div class="row" style="margin:0 0 10px"><div style="flex:1"><b style="font-size:14.5px">Envoi automatique</b><div class="small muted">Chaque jour, les 14 prochains jours, avec tes cibles à jour</div></div><button class="chip'+(on?' hl':'')+'" style="border:0;min-height:36px;padding:0 16px" data-act="autopush" aria-pressed="'+on+'">'+(on?'Oui':'Non')+'</button></div>'+
+    '<button class="btn pri" data-act="pushnow">Envoyer maintenant les 14 prochains jours</button>'+
+    '<p class="small muted" style="margin:8px 0">Le plan ne commence qu’en janvier ? Pour voir dès maintenant à quoi ressemblent les séances sur ta montre, envoie la semaine 1 en essai (marquée [ESSAI], sur les 6 prochains jours).</p><div class="btns"><button class="btn" data-act="pushprev">Envoyer une semaine d’essai</button><button class="btn" data-act="clearprev">Retirer l’essai</button></div>'+
+    '<p class="small muted">'+(state.ui.lastPush?'Dernier envoi : '+ago(state.ui.lastPush)+'. ':'')+'Le plan commence le '+fmtDay(PLAN_START)+' '+PLAN_START.getFullYear()+'.</p>';
+}
 function hasProf(){var p=state.ui.prof||{};return !!(p.ftp||p.fc||p.thr||p.css);}
 function ago(t){if(!t)return 'jamais';var m=Math.round((Date.now()-t)/6e4);return m<1?'à l’instant':m<60?'il y a '+m+' min':m<1440?'il y a '+Math.round(m/60)+' h':'il y a '+Math.round(m/1440)+' j';}
 function vActs(list){
@@ -982,6 +1136,7 @@ function vWeek(){
   if(st.s==='before')h+='<div class="banner">'+ic('info',20)+'<div><b>Le programme n’a pas encore commencé.</b> Il démarre le '+fmtLong(PLAN_START).toLowerCase()+', dans '+st.days+' jour'+(st.days>1?'s':'')+'. Tu peux déjà consulter les semaines à venir.</div></div>';
   h+='<section class="card"><div class="row"><h2 style="margin:0">Avancement</h2><span class="sp"></span><span class="chip">'+ws.d+' / '+ws.n+' séances</span></div><div style="height:12px"></div>'+
     bar(pct(ws.d,ws.n))+'<div class="row small muted" style="margin-top:8px"><span>'+fh(ws.dmin)+' réalisées</span><span class="sp"></span><span>'+fh(ws.min)+' prévues'+(ws.m?' · '+km(ws.m)+' km nage':'')+'</span></div></section>';
+  if(state.sv.url&&state.sv.key&&wv>=st.w&&st.s!=='after')h+='<button class="btn" data-act="pushweek" style="margin:0 0 14px">Envoyer cette semaine vers Garmin</button>';
   h+='<section class="card theme"><div class="eyebrow">Thème de la semaine</div><div class="t">'+esc(wk.theme)+'</div><p>'+esc(wk.kind==='rec'?'Semaine de décharge : le volume baisse d’environ un tiers. Garde les séances faciles, dors plus, mange bien. C’est ici que tu absorbes la charge et que tu progresses.':wk.ph.tip)+'</p></section>';
   wk.days.forEach(function(day){
     var isToday=diffDays(day.date,t)===0,real=day.sessions.filter(function(s){return s.sp!=='rest';}),dn=real.filter(function(s){return isDone(s);}).length;
@@ -1157,6 +1312,11 @@ document.addEventListener('click',function(e){
   else if(a==='syncsv')syncActs(true,true);
   else if(a==='allacts')openAllActs();
   else if(a==='actdetail')openActDetail(d.aid);
+  else if(a==='pushnow')pushWindow(true);
+  else if(a==='pushprev')pushPreview();
+  else if(a==='clearprev')clearPreview();
+  else if(a==='pushweek'){var w0=(wv-1)*7;pushRange(Math.max(w0,diffDays(today(),PLAN_START)),w0+6,true);}
+  else if(a==='autopush'){state.ui.autopush=!state.ui.autopush;save();openSheet();if(state.ui.autopush)pushWindow(true);}
   else if(a==='rcscen'){(state.ui.race=state.ui.race||{}).scen=d.v;save();render(true);}
   else if(a==='rcwet'){var rp=state.ui.race=state.ui.race||{};rp.wet=!(rp.wet!==false);save();render(true);}
   else if(a==='dsh'){state.ui.dsh=d.v;save();render(false);}
@@ -1219,7 +1379,7 @@ function openSheet(){
     '<label class="inp"><span>FC max<small>bpm</small></span><input id="pf-fc" inputmode="numeric" placeholder="ex. 185" value="'+esc(pv('fc'))+'"></label>'+
     '<label class="inp"><span>Allure seuil course<small>min:s par km (≈ 10 km)</small></span><input id="pf-thr" placeholder="ex. 4:50" value="'+esc(pv('thr'))+'"></label>'+
     '<label class="inp"><span>CSS natation<small>min:s par 100 m</small></span><input id="pf-css" placeholder="ex. 1:50" value="'+esc(pv('css'))+'"></label>'+
-    svSettings()+'<h4>Sauvegarde</h4><p>Tout est enregistré automatiquement sur cet appareil. Exporte une copie de sécurité de temps en temps (changement de téléphone, nettoyage de Safari…).</p>'+
+    svSettings()+pushSettings()+'<h4>Sauvegarde</h4><p>Tout est enregistré automatiquement sur cet appareil. Exporte une copie de sécurité de temps en temps (changement de téléphone, nettoyage de Safari…).</p>'+
     '<div class="btns"><button class="btn pri" data-act="export">Exporter</button><button class="btn" data-act="import">Importer</button></div>'+
     '<textarea id="io" style="min-height:96px;margin-top:10px" placeholder="La sauvegarde apparaît ici après « Exporter ». Pour restaurer, colle-la ici puis touche « Importer »." aria-label="Données de sauvegarde"></textarea>'+
     '<h4>Installer sur iPhone</h4><p>Dans Safari : touche <b>Partager</b>, puis <b>Sur l’écran d’accueil</b>. L’app s’ouvre alors en plein écran et garde tes données hors connexion.</p>'+
@@ -1820,6 +1980,7 @@ function syncActs(force,loud){
       var acts=j.activities||[],changed=JSON.stringify(acts)!==JSON.stringify(sv.acts||[])||sv.conn!==!!j.connected||!!sv.err||(sv.werr||'')!==(j.error||'');
       sv.acts=acts;if(j.meta){if(j.meta.hrz)sv.hrz=j.meta.hrz;sv.meta=j.meta;}sv.conn=!!j.connected;sv.werr=j.error||'';sv.t=Date.now();sv.err='';save();
       if(loud)toast('Activités synchronisées');
+      setTimeout(maybeAutoPush,1500);
       if(changed||loud)safeRender();
     })
     .catch(function(e){
@@ -1870,7 +2031,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={pushPreview:pushPreview,clearPreview:clearPreview,pushWindow:pushWindow,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
 render(false);
 (function(){
   syncActs(true);
