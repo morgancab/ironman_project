@@ -179,6 +179,17 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .dates{display:flex;gap:10px;margin:8px 0 0}
 .dates label{flex:1;font-size:12px;color:var(--t2)}
 .dates input{display:block;width:100%;height:40px;margin-top:3px;border-radius:10px;border:0;background:var(--card2);color:var(--t1);font-size:15px;padding:0 10px;font-family:inherit;color-scheme:dark}
+.rhero{text-align:center;padding:20px 16px 18px;background:linear-gradient(160deg,#262932,#15161b)}
+.rhero .big{font-size:54px;line-height:1.05;font-weight:800;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums}
+.rline{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.rline:last-child{margin:0}
+.rline .ico{flex:none;width:38px;height:38px;border-radius:11px;background:var(--cb);color:var(--c);display:grid;place-items:center}
+.rline .bd{flex:1;min-width:0}
+.rline .t{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rline small{display:block;color:var(--t2);font-size:12px;margin-top:2px;line-height:1.3}
+.cf{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px;background:rgba(255,255,255,.12);color:var(--t1)}
+.warn{display:flex;gap:10px;background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.4);border-radius:14px;padding:10px 12px;font-size:13px;color:#ecd9a8;margin:0 0 14px}
+.warn svg{color:var(--warn);flex:none;margin-top:1px}
 .tip{margin-top:10px;font-size:13.5px;color:var(--t2);background:rgba(255,255,255,.05);border-radius:12px;padding:9px 12px}
 .legendrpe{font-size:13px;color:var(--t2);line-height:1.5}
 .legendrpe b{color:var(--t1);font-weight:600}
@@ -609,9 +620,9 @@ function raceDays(){
     [S('race','IRONMAN DES SABLES D’OLONNE','Jour J',0,[
       'Avant le départ : petit-déjeuner 2 h 30 à 3 h avant (1–2 g de glucides/kg, éprouvé à l’entraînement), 500 ml de boisson jusqu’à 1 h avant, un gel 15 min avant',
       'Natation 3,8 km : place-toi sur ton rythme {s:im}, nage long et régulier, repère-toi toutes les 8–10 mouvements',
-      'Vélo 180 km : les 30 premières minutes plus lentes que prévu. Allure Ironman {b:im}. Mange 20–25 g de glucides toutes les 20 min (60–90 g/h), bois 500–750 ml/h, sel selon la chaleur',
+      'Vélo 178 km : les 30 premières minutes plus lentes que prévu. Allure Ironman {b:im}. Mange 20–25 g de glucides toutes les 20 min (60–90 g/h), bois 500–750 ml/h, sel selon la chaleur',
       'Course 42,195 km : les 10 premiers km, tu te retiens {r:im}. Aux ravitaillements, marche si besoin, mange, bois, garde le sourire',
-      'Rien de nouveau le jour J : matériel, nutrition et allures éprouvés à l’entraînement'],{sum:'3,8 km · 180 km · 42,195 km',goal:'Exécuter le plan : partir prudent, finir fort.',tip:'Tout le travail est fait. Profite de chaque kilomètre.'})]
+      'Rien de nouveau le jour J : matériel, nutrition et allures éprouvés à l’entraînement'],{sum:'3,8 km · 178 km · 42,195 km',goal:'Exécuter le plan : partir prudent, finir fort.',tip:'Tout le travail est fait. Profite de chaque kilomètre.'})]
   ];
 }
 
@@ -789,8 +800,9 @@ function vDash(){
   var st=status(),S_=stats(),cur=PLAN[st.w-1],ws=wkStats(cur),h='';
   h+=topbar('Les Sables d’Olonne','Ironman 2027',true);
   var dsh=state.ui.dsh||(st.s==='before'?'data':'plan');
-  h+='<div class="seg" role="group" aria-label="Vue du tableau de bord"><button data-act="dsh" data-v="plan" aria-pressed="'+(dsh==='plan')+'">Programme</button><button data-act="dsh" data-v="data" aria-pressed="'+(dsh==='data')+'">Données</button></div>';
+  h+='<div class="seg" role="group" aria-label="Vue du tableau de bord"><button data-act="dsh" data-v="plan" aria-pressed="'+(dsh==='plan')+'">Programme</button><button data-act="dsh" data-v="data" aria-pressed="'+(dsh==='data')+'">Données</button><button data-act="dsh" data-v="race" aria-pressed="'+(dsh==='race')+'">Course</button></div>';
   if(dsh==='data')return h+vData();
+  if(dsh==='race')return h+vRace();
   // Compte à rebours
   var state_='';
   if(st.s==='before')state_='Le programme démarre le '+fmtLong(PLAN_START).toLowerCase()+' (dans '+st.days+' jour'+(st.days>1?'s':'')+')';
@@ -1082,6 +1094,8 @@ document.addEventListener('click',function(e){
   else if(a==='syncsv')syncActs(true,true);
   else if(a==='allacts')openAllActs();
   else if(a==='actdetail')openActDetail(d.aid);
+  else if(a==='rcscen'){(state.ui.race=state.ui.race||{}).scen=d.v;save();render(true);}
+  else if(a==='rcwet'){var rp=state.ui.race=state.ui.race||{};rp.wet=!(rp.wet!==false);save();render(true);}
   else if(a==='dsh'){state.ui.dsh=d.v;save();render(false);}
   else if(a==='dflt'){
     var f=state.ui.dflt=state.ui.dflt||{m:'26w'};
@@ -1101,6 +1115,12 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('change',function(e){
   var t=e.target;
+  if(t&&/^rc-/.test(t.id||'')){
+    var rp=state.ui.race=state.ui.race||{},k=t.id.slice(3),v=t.value.trim();
+    if(k==='goal'){var g=parseHM(v);if(g)rp.goal=g;else delete rp.goal;}
+    else{var nv=parseFloat(v.replace(',','.'));if(isFinite(nv)&&nv>=0)rp[k]=nv;else delete rp[k];}
+    save();render(true);return;
+  }
   if(t&&(t.id==='dfrom'||t.id==='dto')){
     var f=state.ui.dflt=state.ui.dflt||{m:'custom'};
     f[t.id==='dfrom'?'from':'to']=t.value;f.m='custom';dsel=null;save();render(true);
@@ -1162,6 +1182,145 @@ function doImport(){
 function doReset(){
   if(!confirm('Effacer toutes les séances cochées et toutes les notes ? Cette action est définitive.'))return;
   state.done={};state.notes={};state.links={};save();closeSheet();render(false);toast('Données réinitialisées');
+}
+
+/* ---------- Estimation du temps de course (IRONMAN full distance) ----------
+   Natation : allure médiane de tes nages ≥ 1 km. Vélo et course : régression vitesse = f(FC moyenne, dénivelé/km)
+   sur tes sorties des 26 dernières semaines, prédite à la FC cible d’Ironman et au relief du parcours, puis
+   pénalités de fatigue (endurance sur 178 km, marathon après le vélo) selon le scénario. Pas de puissance : tout repose sur la FC. */
+var RACE={swimM:3800,bikeM:178000,runM:42195,cutoff:17*3600};
+var RSCEN={prud:{n:'Prudent',sw:1.06,bk:0.94,rn:1.22},real:{n:'Réaliste',sw:1,bk:1,rn:1.12},ambi:{n:'Ambitieux',sw:0.96,bk:1.05,rn:1.06}};
+function raceParams(){
+  var p=state.ui.race||{},m=state.sv&&state.sv.meta||{},lt=m.lthr||(m.maxhr?Math.round(m.maxhr*0.9):172);
+  return {bikeUp:p.bikeUp!==undefined?p.bikeUp:1334,runUp:p.runUp!==undefined?p.runUp:200,hrB:p.hrB||Math.round(lt*0.84),hrR:p.hrR||Math.round(lt*0.86),
+    wet:p.wet!==false,scen:p.scen||'real',t1:p.t1!==undefined?p.t1:6,t2:p.t2!==undefined?p.t2:4,goal:p.goal||0,lt:lt};
+}
+function medianOf(a){var s=a.slice().sort(function(x,y){return x-y;}),n=s.length;return n?(n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2):0;}
+function solve3(A,B){
+  var M=A.map(function(r,i){return r.concat([B[i]]);}),i,j,k;
+  for(i=0;i<3;i++){
+    var p=i;for(j=i+1;j<3;j++)if(Math.abs(M[j][i])>Math.abs(M[p][i]))p=j;
+    if(Math.abs(M[p][i])<1e-9)return null;
+    var t=M[i];M[i]=M[p];M[p]=t;
+    for(j=i+1;j<3;j++){var f=M[j][i]/M[i][i];for(k=i;k<4;k++)M[j][k]-=f*M[i][k];}
+  }
+  var x=[0,0,0];
+  for(i=2;i>=0;i--){var s=M[i][3];for(j=i+1;j<3;j++)s-=M[i][j]*x[j];x[i]=s/M[i][i];}
+  return x;
+}
+function fitLin(rows){
+  var n=rows.length;if(n<8)return null;
+  var A=[[0,0,0],[0,0,0],[0,0,0]],B=[0,0,0],ym=0,i,j;
+  rows.forEach(function(r){var x=[1,r[1],r[2]];for(i=0;i<3;i++){for(j=0;j<3;j++)A[i][j]+=x[i]*x[j];B[i]+=x[i]*r[0];}ym+=r[0];});
+  var c=solve3(A,B);if(!c)return null;
+  ym/=n;var sst=0,sse=0;
+  rows.forEach(function(r){var p=c[0]+c[1]*r[1]+c[2]*r[2];sse+=(r[0]-p)*(r[0]-p);sst+=(r[0]-ym)*(r[0]-ym);});
+  return {c:c,r2:sst>0?1-sse/sst:0,n:n};
+}
+function estRace(all,P,cut){
+  var base=cut===null||cut===undefined?idxOfDate(today()):cut,sc=RSCEN[P.scen]||RSCEN.real,out={};
+  var win=all.filter(function(a){var d=dayIdx(a);return d<=base&&d>base-182;});
+  // natation
+  var sw=win.filter(function(a){return /Swim/.test(a.t)&&a.m>=1500&&a.d>0;});
+  if(sw.length<3)sw=win.filter(function(a){return /Swim/.test(a.t)&&a.m>=1000&&a.d>0;});
+  if(sw.length>=3){
+    var sp=medianOf(sw.map(function(a){return a.d/a.m*100;})),st=RACE.swimM/100*sp*1.05*(P.wet?0.97:1)*sc.sw;
+    out.swim={t:st,n:sw.length,conf:sw.length>=6?'bonne':'moyenne',basis:'allure médiane de tes '+sw.length+' nages ≥ 1 km ('+mmss(sp)+' /100 m), +5 % (eau libre, repérage, 3,8 km d’affilée)'+(P.wet?', −3 % combinaison':'')};
+  }
+  // vélo
+  var rb=win.filter(function(a){return a.t!=='VirtualRide'&&/Ride/.test(a.t)&&a.m>=15000&&a.d>=2700&&a.h>0;}).map(function(a){return [a.m/a.d*3.6,a.h,a.z/a.m*1000];});
+  if(rb.length>=3){
+    var eB=P.bikeUp/(RACE.bikeM/1000),fb=fitLin(rb),v,basis,good=fb&&fb.c[1]>0.02&&fb.r2>0.15;
+    if(good){v=fb.c[0]+fb.c[1]*P.hrB+fb.c[2]*eB;basis='régression FC / dénivelé sur '+rb.length+' sorties, à '+P.hrB+' bpm et '+Math.round(eB*10)/10+' m/km de D+';}
+    else{v=medianOf(rb.map(function(r){return r[0];}));basis='vitesse médiane de tes '+rb.length+' sorties ('+v.toFixed(1).replace('.',',')+' km/h), données insuffisantes pour une régression';}
+    v=Math.max(22,Math.min(38,v))*sc.bk;
+    var bt=RACE.bikeM/(v/3.6)*1.03+240;
+    out.bike={t:bt,n:rb.length,conf:good&&rb.length>=15&&fb.r2>=0.35?'bonne':rb.length>=8?'moyenne':'faible',basis:basis+' ; +3 % d’endurance sur 178 km, 4 min d’arrêts'};
+  }
+  // course à pied (marathon après le vélo)
+  var rr=win.filter(function(a){return a.t!=='VirtualRun'&&/Run/.test(a.t)&&a.m>=4000&&a.d>=1500&&a.h>0;}).map(function(a){return [a.m/a.d,a.h,a.z/a.m*1000];});
+  if(rr.length>=3){
+    var eR=P.runUp/(RACE.runM/1000),fr=fitLin(rr),vr,basisR,goodR=fr&&fr.c[1]>0.005&&fr.r2>0.15;
+    if(goodR){vr=fr.c[0]+fr.c[1]*P.hrR+fr.c[2]*eR;basisR='régression FC / dénivelé sur '+rr.length+' sorties, à '+P.hrR+' bpm et '+Math.round(eR*10)/10+' m/km de D+';}
+    else{vr=medianOf(rr.map(function(r){return r[0];}));basisR='allure médiane de tes '+rr.length+' sorties ('+mmss(1000/vr)+' /km), données insuffisantes pour une régression';}
+    vr=Math.max(1000/510,Math.min(1000/270,vr));
+    var rt=RACE.runM/vr*sc.rn;
+    out.run={t:rt,n:rr.length,conf:goodR&&rr.length>=15&&fr.r2>=0.35?'bonne':rr.length>=8?'moyenne':'faible',basis:basisR+' ; allure ralentie de '+Math.round((sc.rn-1)*100)+' % (fatigue du vélo, ravitaillements)'};
+  }
+  out.t1=P.t1*60;out.t2=P.t2*60;
+  out.total=out.swim&&out.bike&&out.run?out.swim.t+out.bike.t+out.run.t+out.t1+out.t2:null;
+  return out;
+}
+function estAll(all,P,cut){var r={};Object.keys(RSCEN).forEach(function(k){r[k]=estRace(all,Object.assign({},P,{scen:k}),cut);});return r;}
+function hms(s){s=Math.round(s/60)*60;var h=Math.floor(s/3600),m=Math.round(s%3600/60);return h+' h '+('0'+m).slice(-2);}
+function parseHM(s){var m=/^\s*(\d{1,2})\s*[:hH]\s*(\d{1,2})?\s*$/.exec(s||'');return m?(+m[1])*3600+(+(m[2]||0))*60:0;}
+function paceOf(k,t){return k==='swim'?mmss(t/RACE.swimM*100)+' /100 m':k==='bike'?(RACE.bikeM/t*3.6).toFixed(1).replace('.',',')+' km/h':mmss(t/RACE.runM*1000)+' /km';}
+function evoChart(pts){
+  var W=340,H=140,L=34,B=20,T=8,R=10,n=pts.length,mn=1e9,mx=0,i;
+  pts.forEach(function(p){mn=Math.min(mn,p.t);mx=Math.max(mx,p.t);});
+  var lo=Math.floor(mn/3600)-0.5,hi=Math.ceil(mx/3600)+0.5,x=function(i){return n>1?L+i*(W-L-R)/(n-1):L+(W-L-R)/2;},y=function(t){return T+(H-T-B)*(1-(t/3600-lo)/(hi-lo));};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Évolution du temps de course estimé" data-ch="evo">',v,d='',hp=[];
+  for(v=Math.ceil(lo);v<=hi;v+=1)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v*3600)+'" y2="'+y(v*3600)+'" stroke="#2c2c2e"/><text x="'+(L-6)+'" y="'+(y(v*3600)+3.5)+'" text-anchor="end" font-size="10" fill="#85847d">'+v+' h</text>';
+  pts.forEach(function(p,i){d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(p.t).toFixed(1);
+    s+='<text x="'+x(i)+'" y="'+(H-5)+'" text-anchor="middle" font-size="10" fill="#85847d">'+p.lab+'</text>';
+    hp.push({x:x(i),dots:[[y(p.t),'#f5f4ef']],tip:'<b>'+p.full+'</b><br>Total <b>'+hms(p.t)+'</b><br>Nage '+hms(p.s)+' · Vélo '+hms(p.b)+' · Course '+hms(p.r)});});
+  if(n>1)s+='<path d="'+d+'" fill="none" stroke="#f5f4ef" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  pts.forEach(function(p,i){s+='<circle cx="'+x(i)+'" cy="'+y(p.t)+'" r="4" fill="#f5f4ef" stroke="#1c1c1e" stroke-width="2"/>';});
+  CH.evo={W:W,H:H,T:T,B:B,pts:hp};
+  return s+hvLayer()+'</svg>';
+}
+function rcIn(id,label,unit,val,ph){return '<label class="inp"><span>'+label+'<small>'+unit+'</small></span><input id="rc-'+id+'" inputmode="decimal" autocomplete="off" value="'+esc(val)+'" placeholder="'+esc(ph)+'"></label>';}
+function vRace(){
+  var all=dataActs(),sv=state.sv,P=raceParams(),h='',st=status();
+  if(!(sv.url&&sv.key)||!all.length)return '<section class="card"><h2>Estimation du temps de course</h2><p class="muted" style="margin:0">Elle s’appuie sur tes activités Garmin : configure la synchronisation (Réglages) pour la calculer.</p></section>';
+  var E=estAll(all,P,null),cur=E[P.scen],rd=diffDays(RACE_DATE,today());
+  if(!cur.total){
+    return '<section class="card"><h2>Estimation du temps de course</h2><p class="muted" style="margin:0">Pas assez de données récentes : il faut au moins 3 nages ≥ 1 km, 3 sorties vélo ≥ 15 km et 3 courses ≥ 4 km sur les 26 dernières semaines.</p></section>';
+  }
+  h+='<section class="card rhero"><div class="eyebrow">Estimation si la course avait lieu aujourd’hui</div><div class="big">'+hms(cur.total)+'</div>'+
+    '<div class="small muted" style="margin-top:6px">Scénario '+RSCEN[P.scen].n.toLowerCase()+' · fourchette '+hms(E.ambi.total)+' – '+hms(E.prud.total)+'</div>'+
+    '<div class="rng" style="justify-content:center;margin:14px 0 0" role="group" aria-label="Scénario">'+Object.keys(RSCEN).map(function(k){return '<button data-act="rcscen" data-v="'+k+'" aria-pressed="'+(P.scen===k)+'">'+RSCEN[k].n+'</button>';}).join('')+'</div>'+
+    '<div class="small muted" style="margin-top:12px">'+(rd>0?'J-'+rd+' · ':'')+'IRONMAN des Sables d’Olonne · '+fmtDay(RACE_DATE)+' '+RACE_DATE.getFullYear()+'<br>Marge sur la limite de '+(RACE.cutoff/3600)+' h : '+hms(RACE.cutoff-cur.total)+'</div></section>';
+  // par discipline
+  var tot=cur.total,parts=[['swim','Natation','3,8 km',cur.swim],['t1','Transition T1','',{t:cur.t1}],['bike','Vélo','178 km · 1 334 m D+',cur.bike],['t2','Transition T2','',{t:cur.t2}],['run','Course à pied','marathon · 200 m D+',cur.run]];
+  var bars='<div class="zbar" role="img" aria-label="Répartition du temps de course">'+parts.map(function(p){return '<span style="flex:'+p[3].t+';background:'+(p[0]==='t1'||p[0]==='t2'?'#48484a':SPCOL[p[0]])+'" title="'+p[1]+' · '+hms(p[3].t)+'"></span>';}).join('')+'</div>';
+  var rows='';
+  parts.forEach(function(p){
+    var k=p[0],o=p[3];
+    if(k==='t1'||k==='t2'){rows+='<div class="rline"><div class="ico" style="--c:var(--t2);--cb:rgba(152,152,159,.14)">'+ic('rest',20)+'</div><div class="bd"><div class="row"><b style="font-size:15px">'+p[1]+'</b><span class="sp"></span><span class="t">'+Math.round(o.t/60)+' min</span></div></div></div>';return;}
+    var lo=E.ambi[k].t,hi=E.prud[k].t;
+    rows+='<div class="rline sp-'+k+'"><div class="ico">'+ic(k,20)+'</div><div class="bd"><div class="row"><b style="font-size:15px">'+p[1]+' <span class="muted" style="font-weight:500;font-size:12.5px">'+p[2]+'</span></b><span class="sp"></span><span class="t">'+hms(o.t)+'</span></div>'+
+      '<small>'+paceOf(k,o.t)+' · fourchette '+hms(lo)+' – '+hms(hi)+' · '+pct(o.t,tot)+' % du temps<span class="cf">confiance '+o.conf+'</span></small><small>'+esc(o.basis)+'</small></div></div>';
+  });
+  h+=dataCard('Par discipline','scénario '+RSCEN[P.scen].n.toLowerCase(),bars+'<div style="height:10px"></div>'+rows);
+  // objectif
+  if(P.goal){
+    var core=cur.swim.t+cur.bike.t+cur.run.t,f=(P.goal-cur.t1-cur.t2)/core,gap=cur.total-P.goal;
+    h+=dataCard('Objectif '+hms(P.goal),gap>0?'écart : '+hms(gap)+' à gagner':'objectif atteignable','<p class="small muted" style="margin:0 0 12px">'+(gap>0?'Il faut aller <b style="color:var(--t1)">'+Math.round((1-f)*100)+' % plus vite</b> que l’estimation, sur chaque discipline, pour tenir l’objectif.':'L’estimation est <b style="color:var(--t1)">'+hms(-gap)+'</b> sous ton objectif.')+'</p>'+
+      ['swim','bike','run'].map(function(k){var t=cur[k].t*f;return '<div class="spr sp-'+k+'"><div class="ico">'+ic(k,20)+'</div><div class="bd"><div class="pr-h" style="margin:0"><b>'+SPLBL[k].split(' ')[0]+'</b><span>'+paceOf(k,t)+' · '+hms(t)+'</span></div></div></div>';}).join(''));
+  }
+  // évolution
+  var pts=[],first=Infinity,i;
+  all.forEach(function(a){first=Math.min(first,dayIdx(a));});
+  var t0=today(),cur0=new Date(t0.getFullYear(),t0.getMonth(),1);
+  var fd=addDays(PLAN_START,first),m0=new Date(fd.getFullYear(),fd.getMonth()+3,1);
+  for(var mm=new Date(m0);mm<=cur0;mm=new Date(mm.getFullYear(),mm.getMonth()+1,1)){
+    var end=new Date(mm.getFullYear(),mm.getMonth()+1,0);if(end>t0)end=t0;
+    var e=estRace(all,P,idxOfDate(end));
+    if(e.total)pts.push({t:e.total,s:e.swim.t,b:e.bike.t,r:e.run.t,lab:MONTHS[mm.getMonth()].replace('.',''),full:MONTHS_L[mm.getMonth()]+' '+mm.getFullYear()+' (au '+fmtDay(end)+')'});
+  }
+  if(pts.length>=2)h+=dataCard('Évolution de l’estimation','fin de chaque mois','<div class="chartwrap">'+evoChart(pts)+'</div><p class="small muted" style="margin:8px 0 0">Même méthode appliquée à tes données jusqu’à la fin de chaque mois. Une courbe qui descend = tu progresses.</p>');
+  // hypothèses
+  h+=dataCard('Hypothèses','modifiables',
+    '<p class="small muted" style="margin:0 0 12px">Estimation indicative, sans capteur de puissance : elle repose sur ta FC et ton historique. Ajuste ces valeurs dès que tu connais le parcours.</p>'+
+    rcIn('bikeUp','Dénivelé vélo','D+ total (m)',P.bikeUp,'1334')+rcIn('runUp','Dénivelé course','D+ total (m)',P.runUp,'200')+
+    rcIn('hrB','FC cible vélo','bpm',P.hrB,String(P.hrB))+rcIn('hrR','FC cible course','bpm',P.hrR,String(P.hrR))+
+    rcIn('t1','Transition T1','minutes',P.t1,'6')+rcIn('t2','Transition T2','minutes',P.t2,'4')+
+    rcIn('goal','Objectif de temps','h:mm (optionnel)',P.goal?hms(P.goal).replace(' h ',':'):'','13:30')+
+    '<div class="row" style="margin-top:6px"><div style="flex:1"><b style="font-size:14.5px">Combinaison de natation</b><div class="small muted">−3 % sur la natation (eau froide en juin)</div></div><button class="chip'+(P.wet?' hl':'')+'" style="border:0;min-height:36px;padding:0 16px" data-act="rcwet" aria-pressed="'+P.wet+'">'+(P.wet?'Oui':'Non')+'</button></div>');
+  // parcours
+  h+='<section class="card"><h2>Le parcours</h2><ul class="small muted" style="margin:0;padding-left:18px;line-height:1.6"><li>Natation : <b style="color:var(--t1)">3,8 km</b>, dans le chenal et l’océan.</li><li>Vélo : <b style="color:var(--t1)">178 km</b> pour <b style="color:var(--t1)">1 334 m de D+</b> (≈ 7,5 m/km, parcours vallonné).</li><li>Course à pied : <b style="color:var(--t1)">marathon (42,195 km)</b> avec <b style="color:var(--t1)">200 m de D+</b> (≈ 4,7 m/km, quasi plat).</li><li>Départ annoncé le '+fmtDay(RACE_DATE)+' '+RACE_DATE.getFullYear()+' à 7 h (source non officielle). Limite de temps : 17 h est la limite habituelle des IRONMAN, à confirmer pour cette course.</li></ul></section>';
+  return h;
 }
 
 /* ---------- Infobulles au survol (souris) et au toucher (écran tactile) ---------- */
@@ -1588,7 +1747,7 @@ function syncActs(force,loud){
     .then(function(r){if(!r.ok)throw new Error(r.status===401?'Clé invalide':'Erreur serveur ('+r.status+')');return r.json();})
     .then(function(j){
       var acts=j.activities||[],changed=JSON.stringify(acts)!==JSON.stringify(sv.acts||[])||sv.conn!==!!j.connected||!!sv.err||(sv.werr||'')!==(j.error||'');
-      sv.acts=acts;if(j.meta&&j.meta.hrz)sv.hrz=j.meta.hrz;sv.conn=!!j.connected;sv.werr=j.error||'';sv.t=Date.now();sv.err='';save();
+      sv.acts=acts;if(j.meta){if(j.meta.hrz)sv.hrz=j.meta.hrz;sv.meta=j.meta;}sv.conn=!!j.connected;sv.werr=j.error||'';sv.t=Date.now();sv.err='';save();
       if(loud)toast('Activités synchronisées');
       if(changed||loud)safeRender();
     })
@@ -1640,7 +1799,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
 render(false);
 (function(){
   syncActs(true);
