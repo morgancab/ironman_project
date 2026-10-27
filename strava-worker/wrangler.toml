@@ -1,0 +1,14 @@
+name = "ironman-strava"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "149198b10a2147c3a52546b901f957b8"
+
+[vars]
+# Domaine (https://…) où l'app est HÉBERGÉE, sans chemin : seul ce site pourra appeler l'API.
+# Ne mets pas file:/// ici (ça ne marche pas depuis un iPhone) ; « * » est possible pour un premier test.
+ALLOWED_ORIGIN = "*"
+# Première date récupérée
+SINCE = "2027-01-01"
