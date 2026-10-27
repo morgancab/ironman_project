@@ -7,8 +7,8 @@ binding = "KV"
 id = "149198b10a2147c3a52546b901f957b8"
 
 [vars]
-# Domaine (https://…) où l'app est HÉBERGÉE, sans chemin : seul ce site pourra appeler l'API.
+# Origines autorisées à appeler l API, séparées par des virgules : le site hébergé, tes tests locaux (http://localhost:8080) et « null » (page ouverte en file:///).
 # Ne mets pas file:/// ici (ça ne marche pas depuis un iPhone) ; « * » est possible pour un premier test.
-ALLOWED_ORIGIN = "https://ironmanproject.vercel.app"
+ALLOWED_ORIGIN = "https://ironmanproject.vercel.app,http://localhost:8080,http://127.0.0.1:8080,http://localhost:8081,null"
 # Première date récupérée
 SINCE = "2026-01-01"

@@ -91,6 +91,7 @@ h1{margin:3px 0 0;font-size:34px;line-height:1.08;font-weight:800;letter-spacing
 .readout b{color:var(--t1);font-weight:600}
 svg text{font-family:inherit}
 .chartwrap svg{width:100%;height:auto;display:block;touch-action:manipulation}
+svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 
 .next{display:flex;align-items:center;gap:12px;width:100%;border:0;background:var(--card2);border-radius:16px;padding:12px;text-align:left}
 .next .ico{flex:none;width:42px;height:42px;border-radius:12px;background:var(--cb);color:var(--c);display:grid;place-items:center}
@@ -144,6 +145,40 @@ svg text{font-family:inherit}
 .sr-b.ok{color:var(--t1);font-weight:600}
 .inp.wide{grid-template-columns:1fr}
 .inp.wide input{text-align:left}
+.seg{display:flex;background:var(--card);border-radius:12px;padding:3px;margin:0 0 16px}
+.seg button{flex:1;height:36px;border:0;border-radius:9px;background:none;color:var(--t2);font-size:14px;font-weight:600}
+.seg button[aria-pressed=true]{background:#3a3a3d;color:var(--t1)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.kpi{background:var(--card);border-radius:16px;padding:12px 11px;min-width:0}
+.sheet .kpi{background:var(--card2)}
+.kl{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
+.kv{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap}
+.ks{font-size:11.5px;color:var(--t2);margin-top:3px;line-height:1.25}
+.rng{display:flex;gap:6px;margin:0 0 6px}
+.rng button{border:0;background:var(--card2);color:var(--t2);border-radius:999px;height:30px;padding:0 12px;font-size:12.5px;font-weight:600}
+.rng button[aria-pressed=true]{background:var(--t1);color:#000}
+.mt{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:12px}
+.mt div{font-size:12px;color:var(--t2)}
+.mt b{display:block;font-size:16px;color:var(--t1);font-weight:700;font-variant-numeric:tabular-nums;margin-top:1px}
+.zbar{display:flex;gap:2px;height:14px;margin:4px 0 10px}
+.zbar span{display:block;min-width:2px;border-radius:3px}
+.zrow{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0}
+.zrow i{width:10px;height:10px;border-radius:3px;flex:none}
+.zrow span:last-child{margin-left:auto;color:var(--t2);font-variant-numeric:tabular-nums}
+.ivr{display:grid;grid-template-columns:30px 1.1fr 1fr 1fr .8fr;gap:6px;font-size:13px;padding:7px 0;border-bottom:.5px solid var(--sep);font-variant-numeric:tabular-nums}
+.ivr.h{color:var(--t2);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+.ivr.rest{color:var(--t3);font-size:12px;padding:4px 0}
+.spl{display:grid;grid-template-columns:44px 1fr 66px 34px;align-items:center;gap:8px;font-size:12.5px;margin:7px 0;font-variant-numeric:tabular-nums}
+.spl .b{height:10px;border-radius:5px;background:var(--c)}
+.dh{font-size:15px;font-weight:700;margin:0 0 8px}
+.dh small{font-weight:500;color:var(--t2);font-size:12px;margin-left:6px}
+#tip{position:fixed;z-index:70;pointer-events:none;background:#2c2c2e;border:.5px solid rgba(120,120,128,.6);border-radius:12px;padding:8px 11px;font-size:12.5px;line-height:1.4;box-shadow:0 8px 28px rgba(0,0,0,.55);max-width:250px;opacity:0;transition:opacity .08s;left:0;top:0}
+#tip.on{opacity:1}
+#tip b{font-weight:650}
+#tip .tm{color:var(--t2)}
+.dates{display:flex;gap:10px;margin:8px 0 0}
+.dates label{flex:1;font-size:12px;color:var(--t2)}
+.dates input{display:block;width:100%;height:40px;margin-top:3px;border-radius:10px;border:0;background:var(--card2);color:var(--t1);font-size:15px;padding:0 10px;font-family:inherit;color-scheme:dark}
 .tip{margin-top:10px;font-size:13.5px;color:var(--t2);background:rgba(255,255,255,.05);border-radius:12px;padding:9px 12px}
 .legendrpe{font-size:13px;color:var(--t2);line-height:1.5}
 .legendrpe b{color:var(--t1);font-weight:600}
@@ -230,6 +265,7 @@ textarea:focus{outline:2px solid #5a5a5e}
 <nav class="tabbar" aria-label="Navigation principale"><div class="tabbar-in" id="tabs" role="tablist"></div></nav>
 <div class="sheet-bg" id="sheetbg"><div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Réglages"></div></div>
 <div id="toast" role="status"></div>
+<div id="tip" role="tooltip"></div>
 
 <script>
 'use strict';
@@ -701,7 +737,7 @@ function doneM(s){var a=LK.s2a[s.id];return a?a.m:s.m;}
 function actBlock(s){
   if(s.sp==='rest'||s.sp==='race')return '';
   var a=LK.s2a[s.id],sv=state.sv||{};
-  if(a)return '<div class="act"><b>Activité Garmin</b><div class="an">'+esc(a.n)+'</div><div class="small muted">'+esc(actDate(a)+' · '+actLine(a))+'</div><div class="btns" style="margin-top:10px"><button class="btn" data-act="pickact" data-sid="'+s.id+'">Changer</button><button class="btn" data-act="unlink" data-aid="'+esc(a.id)+'">Dissocier</button></div></div>';
+  if(a)return '<div class="act"><b>Activité Garmin</b><div class="an">'+esc(a.n)+'</div><div class="small muted">'+esc(actDate(a)+' · '+actLine(a))+'</div><button class="btn" style="margin:10px 0 8px" data-act="actdetail" data-aid="'+esc(a.id)+'">Voir le détail de l’activité</button><div class="btns"><button class="btn" data-act="pickact" data-sid="'+s.id+'">Changer</button><button class="btn" data-act="unlink" data-aid="'+esc(a.id)+'">Dissocier</button></div></div>';
   if(sv.url&&sv.key)return '<div class="act"><b>Garmin</b><div class="small muted">Aucune activité associée'+(state.done[s.id]?' (cochée à la main)':'')+'.</div><button class="btn" style="margin:10px 0 0" data-act="pickact" data-sid="'+s.id+'">Associer une activité Garmin</button></div>';
   return '';
 }
@@ -752,6 +788,9 @@ function prRow(label,val,p,c){return '<div class="pr"><div class="pr-h"><b>'+lab
 function vDash(){
   var st=status(),S_=stats(),cur=PLAN[st.w-1],ws=wkStats(cur),h='';
   h+=topbar('Les Sables d’Olonne','Ironman 2027',true);
+  var dsh=state.ui.dsh||(st.s==='before'?'data':'plan');
+  h+='<div class="seg" role="group" aria-label="Vue du tableau de bord"><button data-act="dsh" data-v="plan" aria-pressed="'+(dsh==='plan')+'">Programme</button><button data-act="dsh" data-v="data" aria-pressed="'+(dsh==='data')+'">Données</button></div>';
+  if(dsh==='data')return h+vData();
   // Compte à rebours
   var state_='';
   if(st.s==='before')state_='Le programme démarre le '+fmtLong(PLAN_START).toLowerCase()+' (dans '+st.days+' jour'+(st.days>1?'s':'')+')';
@@ -792,7 +831,7 @@ function vDash(){
   if(nx)h+='<button class="next sp-'+nx.s.sp+'" data-act="gowk" data-w="'+st.w+'" style="margin-top:12px"><span class="ico">'+ic(nx.s.sp,22)+'</span><span style="flex:1;min-width:0"><span class="eyebrow" style="display:block;font-size:11px">Prochaine séance · '+esc(nx.day)+'</span><b style="display:block;font-size:15.5px;font-weight:650;margin-top:2px">'+esc(nx.s.title)+'</b><span class="small muted">'+(nx.s.min?fh(nx.s.min):nx.s.sum)+'</span></span>'+ic('right',20)+'</button>';
   else if(ws.n&&ws.d===ws.n)h+='<p class="small muted" style="margin:12px 0 0">Semaine terminée : bien joué, récupère.</p>';
   h+='</section>';
-  h+=vActs();
+  if(!(state.sv.url&&state.sv.key))h+=vActs();
   // Graphique
   h+='<section class="card"><h2>Volume hebdomadaire<small>heures par semaine</small></h2><div class="chartwrap">'+chart(st)+'</div>'+
     '<div class="legend"><span><i style="background:#3a3a3d"></i>Prévu</span><span><i style="background:var(--acc)"></i>Réalisé</span></div>'+
@@ -801,22 +840,22 @@ function vDash(){
 }
 function hasProf(){var p=state.ui.prof||{};return !!(p.ftp||p.fc||p.thr||p.css);}
 function ago(t){if(!t)return 'jamais';var m=Math.round((Date.now()-t)/6e4);return m<1?'à l’instant':m<60?'il y a '+m+' min':m<1440?'il y a '+Math.round(m/60)+' h':'il y a '+Math.round(m/1440)+' j';}
-function vActs(){
+function vActs(list){
   var sv=state.sv,h='<section class="card"><div class="row"><h2 style="margin:0">Garmin</h2><span class="sp"></span>';
   if(!(sv.url&&sv.key))
     return h+'</div><p class="small muted" style="margin:8px 0 12px">Connecte ton compte Garmin (via intervals.icu) : tes séances se cocheront toutes seules à partir de tes activités, sans rien saisir.</p><button class="btn pri" data-act="settings" style="margin:0">Configurer la synchronisation</button></section>';
-  var acts=(sv.acts||[]).slice().sort(function(x,y){return y.s>x.s?1:-1;});
+  var acts=(list||sv.acts||[]).slice().sort(function(x,y){return y.s>x.s?1:-1;});
   var chip=sv.err?'Hors ligne':sv.werr?'Problème':sv.conn===false?'Non connecté':'Connecté';
   h+='<span class="chip">'+chip+'</span></div>';
   h+='<p class="small muted" style="margin:8px 0 12px">'+(sv.conn===false&&!sv.werr?'Aucune synchro réussie pour l’instant : vérifie la clé intervals.icu (Réglages). ':'Mise à jour automatique après chaque activité synchronisée par Garmin. ')+'Dernière synchro : '+ago(sv.t)+(sv.err?' · '+esc(sv.err):'')+(sv.werr?' · '+esc(sv.werr):'')+'</p>';
   var un=acts.filter(function(a){return actSport(a)&&dayIdx(a)>=0&&LK.a2s[a.id]===undefined;}).length;
   if(un)h+='<p class="small" style="margin:0 0 10px"><b>'+un+' activité'+(un>1?'s':'')+' non associée'+(un>1?'s':'')+'</b> <span class="muted">(trop courte ou sans séance équivalente). Touche-la pour l’associer.</span></p>';
-  acts.slice(0,6).forEach(function(a){
+  acts.slice(0,8).forEach(function(a){
     var sid=LK.a2s[a.id],s=sid&&SBY[sid],lab=!actSport(a)?'Non suivie':dayIdx(a)<0?'Avant le plan':s?'→ '+sessLabel(s):sid===0?'Ignorée':'Non associée';
-    h+='<button class="srow" data-act="picksess" data-aid="'+esc(a.id)+'"><span class="sr-t"><b>'+esc(a.n||a.t)+'</b><small>'+esc(actDate(a)+' · '+actLine(a))+'</small></span><span class="sr-b'+(s?' ok':'')+'">'+esc(lab)+'</span></button>';
+    h+='<button class="srow" data-act="actdetail" data-aid="'+esc(a.id)+'"><span class="sr-t"><b>'+esc(a.n||a.t)+'</b><small>'+esc(actDate(a)+' · '+actLine(a))+'</small></span><span class="sr-b'+(s?' ok':'')+'">'+esc(lab)+'</span></button>';
   });
   if(!acts.length)h+='<p class="small muted" style="margin:0 0 10px">Aucune activité pour l’instant.</p>';
-  return h+'<button class="btn" data-act="allacts" style="margin:4px 0 8px">Toutes mes activités ('+acts.length+')</button><button class="btn" data-act="syncsv" style="margin:4px 0 0">Synchroniser maintenant</button><p class="small muted" style="margin:8px 0 0">Données Garmin Connect via intervals.icu</p></section>';
+  return h+'<button class="btn" data-act="allacts" style="margin:4px 0 8px">Toutes mes activités ('+(sv.acts||[]).length+')</button><button class="btn" data-act="syncsv" style="margin:4px 0 0">Synchroniser maintenant</button><p class="small muted" style="margin:8px 0 0">Données Garmin Connect via intervals.icu</p></section>';
 }
 function nextSession(wk){
   var t=today(),i,j;
@@ -1042,12 +1081,30 @@ document.addEventListener('click',function(e){
   else if(a==='autolink'){delete state.links[d.aid];save();closeSheet();render(true);toast('Association automatique rétablie');}
   else if(a==='syncsv')syncActs(true,true);
   else if(a==='allacts')openAllActs();
+  else if(a==='actdetail')openActDetail(d.aid);
+  else if(a==='dsh'){state.ui.dsh=d.v;save();render(false);}
+  else if(a==='dflt'){
+    var f=state.ui.dflt=state.ui.dflt||{m:'26w'};
+    if(d.v==='custom'&&!f.from){var rr=dRange(dataActs());f.from=isoDate(rr.from);f.to=isoDate(rr.to);}
+    f.m=d.v;dsel=null;save();render(true);
+  }
+  else if(a==='dchart'){
+    var wl=(el.parentNode.getAttribute('data-wks')||'').split(',').map(Number),cr=el.getBoundingClientRect(),cx=(e.clientX-cr.left)/cr.width*340,ci=Math.floor((cx-30)/((340-30-4)/wl.length));
+    dsel=wl[Math.max(0,Math.min(wl.length-1,ci))];render(true);
+  }
   else if(a==='svresync')svResync();
   else if(a==='settings')openSheet();
   else if(a==='closesheet')closeSheet();
   else if(a==='export')doExport();
   else if(a==='import')doImport();
   else if(a==='reset')doReset();
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t&&(t.id==='dfrom'||t.id==='dto')){
+    var f=state.ui.dflt=state.ui.dflt||{m:'custom'};
+    f[t.id==='dfrom'?'from':'to']=t.value;f.m='custom';dsel=null;save();render(true);
+  }
 });
 document.addEventListener('input',function(e){
   if(e.target&&/^sv-/.test(e.target.id||'')){
@@ -1107,6 +1164,352 @@ function doReset(){
   state.done={};state.notes={};state.links={};save();closeSheet();render(false);toast('Données réinitialisées');
 }
 
+/* ---------- Infobulles au survol (souris) et au toucher (écran tactile) ---------- */
+var CH={},tipEl=null,tipSvg=null;
+function hvLayer(){return '<g class="hv" pointer-events="none" style="display:none"><rect class="hb" y="0" height="0" rx="3" fill="rgba(255,255,255,.09)"/><line class="xh" stroke="rgba(255,255,255,.45)" stroke-width="1"/><circle class="hd" r="4.5" stroke="#1c1c1e" stroke-width="2" style="display:none"/><circle class="hd" r="4.5" stroke="#1c1c1e" stroke-width="2" style="display:none"/></g>';}
+function tipHide(){
+  if(!tipEl)tipEl=document.getElementById('tip');
+  if(tipEl)tipEl.classList.remove('on');
+  if(tipSvg){var g=tipSvg.querySelector('.hv');if(g)g.style.display='none';tipSvg=null;}
+}
+function tipShow(html,cx,cy,touch){
+  if(!tipEl)tipEl=document.getElementById('tip');
+  tipEl.innerHTML=html;tipEl.classList.add('on');
+  var w=tipEl.offsetWidth,hh=tipEl.offsetHeight,vw=window.innerWidth||390,x=cx+14,y=touch?cy-hh-18:cy+16;
+  if(x+w>vw-8)x=cx-14-w;
+  x=Math.max(8,x);
+  if(y<8)y=cy+18;
+  tipEl.style.left=x+'px';tipEl.style.top=y+'px';
+}
+function chartHover(e,svg){
+  var c=CH[svg.getAttribute('data-ch')];
+  if(!c||!c.pts.length)return;
+  var r=svg.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*c.W,best=null,bd=1e9;
+  c.pts.forEach(function(p){var d=Math.abs(p.x-x);if(d<bd){bd=d;best=p;}});
+  if(!best)return;
+  if(tipSvg&&tipSvg!==svg){var og=tipSvg.querySelector('.hv');if(og)og.style.display='none';}
+  tipSvg=svg;
+  var g=svg.querySelector('.hv');if(!g)return;
+  g.style.display='';
+  var hb=g.querySelector('.hb'),xh=g.querySelector('.xh'),ds=g.querySelectorAll('.hd');
+  if(c.band){hb.setAttribute('x',best.x-c.band/2);hb.setAttribute('y',c.T);hb.setAttribute('width',c.band);hb.setAttribute('height',c.H-c.T-c.B);xh.setAttribute('y2',c.T);xh.setAttribute('y1',c.T);}
+  else{hb.setAttribute('height',0);xh.setAttribute('x1',best.x);xh.setAttribute('x2',best.x);xh.setAttribute('y1',c.T);xh.setAttribute('y2',c.H-c.B);}
+  for(var i=0;i<ds.length;i++){
+    var dt=best.dots&&best.dots[i];
+    if(dt){ds[i].setAttribute('cx',best.x);ds[i].setAttribute('cy',dt[0]);ds[i].setAttribute('fill',dt[1]);ds[i].style.display='';}else ds[i].style.display='none';
+  }
+  tipShow(best.tip,e.clientX,e.clientY,e.pointerType==='touch');
+}
+function svgOf(e){var t=e.target;return t&&t.closest?t.closest('svg[data-ch]'):null;}
+document.addEventListener('pointermove',function(e){var s=svgOf(e);if(s)chartHover(e,s);else if(tipSvg)tipHide();});
+document.addEventListener('pointerdown',function(e){var s=svgOf(e);if(s)chartHover(e,s);else tipHide();});
+document.addEventListener('scroll',tipHide,true);
+document.addEventListener('pointerup',function(e){if(e.pointerType==='touch')setTimeout(tipHide,2500);});
+
+/* ---------- Données : agrégats, forme, graphiques ---------- */
+var SPCOL={swim:'#3987e5',bike:'#199e70',run:'#d95926',str:'#98989f',oth:'#6c6c70'};
+var SPLBL={swim:'Natation',bike:'Vélo',run:'Course à pied',str:'Renforcement',oth:'Autres'};
+var ZCOL=['#184f95','#1c5cab','#256abf','#2a78d6','#3987e5','#6da7ec','#9ec5f4'];
+var dsel=null;
+function skey(a){return actSport(a)||'oth';}
+function dataActs(){return ((state.sv&&state.sv.acts)||[]).filter(function(a){return a&&a.s&&plLocal(a.s);});}
+function wIdx(a){return Math.floor(dayIdx(a)/7);}
+function curWk(){return Math.floor(diffDays(today(),PLAN_START)/7);}
+function wStart(w){return addDays(PLAN_START,w*7);}
+function fmtSec(s){return fh(Math.round(s/60));}
+function paceTxt(k,m,s){
+  if(!m||!s)return '–';
+  var v=m/s;
+  if(k==='run')return mmss(1000/v)+' /km';
+  if(k==='swim')return mmss(100/v)+' /100 m';
+  if(k==='bike')return (v*3.6).toFixed(1).replace('.',',')+' km/h';
+  return '–';
+}
+function weekAgg(acts){
+  var m={};
+  acts.forEach(function(a){
+    var w=wIdx(a),o=m[w];
+    if(!o)o=m[w]={w:w,n:0,l:0,sec:0,swim:0,bike:0,run:0,str:0,oth:0};
+    var k=skey(a);o[k]+=a.d;o.sec+=a.d;o.n++;o.l+=a.l||0;
+  });
+  return m;
+}
+function niceScale(mx){
+  var steps=[1,2,4,5,10,20,25,50,100,200],st=steps[steps.length-1],i;
+  for(i=0;i<steps.length;i++)if(mx/steps[i]<=5){st=steps[i];break;}
+  return {step:st,top:Math.max(st,Math.ceil(mx/st)*st)};
+}
+function dlt(cur,prev,fmt){var d=cur-prev;if(!cur&&!prev)return '';return (d>0?'+':d<0?'−':'±')+fmt(Math.abs(d))+' vs sem. préc.';}
+function kpi(l,v,sub){return '<div class="kpi"><div class="kl">'+l+'</div><div class="kv">'+v+'</div>'+(sub?'<div class="ks">'+sub+'</div>':'')+'</div>';}
+function dataCard(title,sub,inner){return '<section class="card"><h2>'+title+(sub?'<small>'+sub+'</small>':'')+'</h2>'+inner+'</section>';}
+
+// Fitness (CTL) / fatigue (ATL) : valeurs calculées par intervals.icu après chaque activité, prolongées par la décroissance exponentielle les jours de repos
+function fitSeries(acts){
+  var by={},first=null;
+  acts.forEach(function(a){
+    if(!(a.cl>0||a.al>0))return;
+    var d=dayIdx(a),p=by[d];
+    if(!p||a.s>p.s)by[d]=a;
+    if(first===null||d<first)first=d;
+  });
+  if(first===null)return null;
+  var end=diffDays(today(),PLAN_START),ctl=0,atl=0,out=[],d;
+  for(d=first;d<=end;d++){
+    if(by[d]){ctl=by[d].cl;atl=by[d].al;}else{ctl*=Math.exp(-1/42);atl*=Math.exp(-1/7);}
+    out.push([d,ctl,atl]);
+  }
+  return out.length>1?out:null;
+}
+function formLabel(t){return t>5?'Frais':t>=-10?'Équilibré':t>=-30?'En charge':'Surcharge';}
+function fitChart(S){
+  var W=340,H=150,L=30,B=20,T=8,R=8,n=S.length,mx=0,i;
+  S.forEach(function(p){mx=Math.max(mx,p[1],p[2]);});
+  var sc=niceScale(Math.max(mx,5)),x=function(i){return L+i*(W-L-R)/(n-1);},y=function(v){return T+(H-T-B)*(1-v/sc.top);},v;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Évolution de la fitness et de la fatigue" data-ch="fit">';
+  for(v=0;v<=sc.top+1e-9;v+=sc.step)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+(v?'#2c2c2e':'#48484a')+'"/><text x="'+(L-6)+'" y="'+(y(v)+3.5)+'" text-anchor="end" font-size="10" fill="#85847d">'+v+'</text>';
+  [[1,'#a9a8a0'],[2,'#f5f4ef']].forEach(function(sr){
+    var d='';S.forEach(function(p,i){d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(p[sr[0]]).toFixed(1);});
+    s+='<path d="'+d+'" fill="none" stroke="'+sr[1]+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  });
+  var ly=S[n-1];
+  s+='<circle cx="'+x(n-1)+'" cy="'+y(ly[1])+'" r="4" fill="#a9a8a0" stroke="#1c1c1e" stroke-width="2"/><circle cx="'+x(n-1)+'" cy="'+y(ly[2])+'" r="4" fill="#f5f4ef" stroke="#1c1c1e" stroke-width="2"/>';
+  var lastM=-1,every=n>200?1:0;
+  S.forEach(function(p,i){var dt=addDays(PLAN_START,p[0]),m=dt.getMonth();if(m!==lastM){if(lastM!==-1&&i>8)s+='<text x="'+x(i)+'" y="'+(H-5)+'" text-anchor="middle" font-size="10" fill="#85847d">'+MONTHS[m].replace('.','')+'</text>';lastM=m;}});
+  var pts=S.map(function(p,i){
+    var dt=addDays(PLAN_START,p[0]),tsb=p[1]-p[2];
+    return {x:x(i),dots:[[y(p[1]),'#a9a8a0'],[y(p[2]),'#f5f4ef']],tip:'<b>'+DAYS[(dt.getDay()+6)%7]+' '+fmtDay(dt)+' '+dt.getFullYear()+'</b><br>Fitness <b>'+Math.round(p[1])+'</b> · Fatigue <b>'+Math.round(p[2])+'</b><br>Forme <b>'+(tsb>0?'+':tsb<0?'−':'')+Math.abs(Math.round(tsb))+'</b> · '+formLabel(tsb)};
+  });
+  CH.fit={W:W,H:H,T:T,B:B,pts:pts};
+  return s+hvLayer()+'</svg>';
+}
+function stackChart(wks,agg,sel){
+  var W=340,H=170,L=30,B=20,T=8,R=4,n=wks.length,slot=(W-L-R)/n,bw=Math.min(24,Math.max(3,slot-2)),mx=0,v;
+  wks.forEach(function(w){var o=agg[w];if(o)mx=Math.max(mx,o.sec/3600);});
+  var sc=niceScale(Math.max(mx,1)),yv=function(q){return T+(H-T-B)*(1-q/sc.top);};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Volume hebdomadaire par discipline, en heures. Survole ou touche une barre pour le détail." data-act="dchart" data-ch="vol">',pts=[];
+  for(v=0;v<=sc.top+1e-9;v+=sc.step)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yv(v)+'" y2="'+yv(v)+'" stroke="'+(v?'#2c2c2e':'#48484a')+'"/><text x="'+(L-6)+'" y="'+(yv(v)+3.5)+'" text-anchor="end" font-size="10" fill="#85847d">'+v+'</text>';
+  var lastM=-1,lblEvery=n>30?Math.ceil(n/10):1;
+  wks.forEach(function(w,i){
+    var o=agg[w],x=L+i*slot+(slot-bw)/2,m=wStart(w).getMonth();
+    if(m!==lastM){if(lastM!==-1||i===0)s+='<text x="'+(L+i*slot)+'" y="'+(H-5)+'" font-size="10" fill="#85847d">'+MONTHS[m].replace('.','')+'</text>';lastM=m;}
+    if(w===sel)s+='<rect x="'+(L+i*slot)+'" y="'+T+'" width="'+slot+'" height="'+(H-T-B)+'" rx="3" fill="rgba(255,255,255,.07)"/>';
+    pts.push({x:L+i*slot+slot/2,tip:weekReadout(agg,w)});
+    if(!o)return;
+    var keys=['swim','bike','run','str','oth'].filter(function(k){return o[k]>0;}),acc=0;
+    keys.forEach(function(k,j){
+      var hrs=o[k]/3600,y1=yv(acc+hrs),y0=yv(acc),hh=Math.max(1.2,(y0-y1)-(acc>0?2:0));
+      s+=j===keys.length-1?col(x,y1,bw,hh,SPCOL[k]):'<rect x="'+x+'" y="'+y1+'" width="'+bw+'" height="'+hh+'" fill="'+SPCOL[k]+'"/>';
+      acc+=hrs;
+    });
+  });
+  CH.vol={W:W,H:H,T:T,B:B,band:slot,pts:pts};
+  return s+hvLayer()+'</svg>';
+}
+function weekReadout(agg,w){
+  var o=agg[w],d=wStart(w);
+  var t='<b>'+fmtDay(d)+' – '+fmtDay(addDays(d,6))+'</b>';
+  if(!o||!o.n)return t+' · aucune activité';
+  var p=[];['swim','bike','run','str','oth'].forEach(function(k){if(o[k]>0)p.push(SPLBL[k].split(' ')[0]+' '+fmtSec(o[k]));});
+  return t+' · <b>'+fmtSec(o.sec)+'</b> · '+o.n+' séance'+(o.n>1?'s':'')+(o.l?' · charge '+o.l:'')+'<br>'+p.join(' · ');
+}
+function zonesHtml(zt,hz,compact){
+  var tot=0,i;(zt||[]).forEach(function(s,i){if(i<7)tot+=s;});
+  if(!tot)return '';
+  var bar='<div class="zbar" role="img" aria-label="Répartition du temps par zone de fréquence cardiaque">',rows='';
+  for(i=0;i<7;i++){
+    var s=zt[i]||0,pc=Math.round(s/tot*100);
+    bar+='<span style="flex:'+s+';background:'+ZCOL[i]+'" title="Z'+(i+1)+' · '+fmtSec(s)+' · '+pc+' %"></span>';
+    var rng=hz&&hz.length>=7?(i===0?'< '+(hz[0]+1):(hz[i-1]+1)+'–'+hz[i])+' bpm':'';
+    if(!compact||s>0)rows+='<div class="zrow"><i style="background:'+ZCOL[i]+'"></i><span>Z'+(i+1)+(rng?' · '+rng:'')+'</span><span>'+fmtSec(s)+' · '+pc+' %</span></div>';
+  }
+  return bar+'</div>'+rows;
+}
+function sportStats(k,acts){
+  var s={n:0,sec:0,m:0,up:0,hrS:0,hrT:0,lng:null,best:null},minM={swim:1000,bike:30000,run:5000}[k];
+  acts.forEach(function(a){
+    if(skey(a)!==k)return;
+    s.n++;s.sec+=a.d;s.m+=a.m;s.up+=a.z||0;
+    if(a.h){s.hrS+=a.h*a.d;s.hrT+=a.d;}
+    if(!s.lng||a.d>s.lng.d)s.lng=a;
+    if(minM&&a.m>=minM&&a.d>0){var sp=a.m/a.d;if(!s.best||sp>s.best.sp)s.best={a:a,sp:sp};}
+  });
+  return s;
+}
+function sportCard(k,s,totSec){
+  var m='';
+  var add=function(l,v){m+='<div>'+l+'<b>'+v+'</b></div>';};
+  add('Séances',s.n);add('Temps',fmtSec(s.sec));
+  if(s.m>0)add('Distance',km(s.m)+' km');
+  if(k==='swim'||k==='bike'||k==='run')add(k==='bike'?'Vitesse moy.':'Allure moy.',paceTxt(k,s.m,s.sec));
+  if(s.hrT)add('FC moy.',Math.round(s.hrS/s.hrT)+' bpm');
+  if(k==='bike'||k==='run')add('Dénivelé',Math.round(s.up).toLocaleString('fr-FR')+' m');
+  if(s.lng)add('Plus longue',fh(Math.round(s.lng.d/60))+(s.lng.m>0?' · '+km(s.lng.m)+' km':''));
+  if(s.best)add('Meilleure '+(k==='bike'?'vitesse':'allure')+' (≥ '+{swim:'1',bike:'30',run:'5'}[k]+' km)',paceTxt(k,s.best.a.m,s.best.a.d));
+  return '<section class="card sp-'+k+'"><div class="row" style="margin-bottom:2px"><span class="s-ic" style="width:36px;height:36px;border-radius:10px">'+ic(k,20)+'</span><h2 style="margin:0">'+SPLBL[k]+'</h2><span class="sp"></span><span class="chip">'+pct(s.sec,totSec)+' % du temps</span></div>'+bar(pct(s.sec,totSec),SPCOL[k])+'<div class="mt">'+m+'</div></section>';
+}
+function idxOfDate(d){return Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-PLAN_START)/DAY);}
+function parseYmd(s){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):null;}
+function dRange(acts){
+  var f=state.ui.dflt||{m:'26w'},t=today(),cw=curWk(),to=t,from,n={'4w':4,'12w':12,'26w':26}[f.m];
+  if(n)from=wStart(cw-n+1);
+  else if(f.m==='ytd')from=new Date(t.getFullYear(),0,1);
+  else if(f.m==='custom'){from=parseYmd(f.from)||addDays(t,-90);to=parseYmd(f.to)||t;if(to<from){var x=from;from=to;to=x;}}
+  else{var mn=null;acts.forEach(function(a){var d=plLocal(a.s);if(d&&(!mn||d<mn))mn=d;});from=mn?new Date(mn.getFullYear(),mn.getMonth(),mn.getDate()):addDays(t,-90);}
+  return {from:from,to:to,fi:idxOfDate(from),ti:idxOfDate(to)};
+}
+function dFilterBar(R,n){
+  var f=state.ui.dflt||{m:'26w'},chips=[['4w','4 sem.'],['12w','12 sem.'],['26w','6 mois'],['ytd','Année'],['all','Tout'],['custom','Période…']];
+  var h='<div class="eyebrow" style="margin:6px 0 8px">Période d’analyse</div><div class="rng" style="flex-wrap:wrap" role="group" aria-label="Période">'+chips.map(function(c){return '<button data-act="dflt" data-v="'+c[0]+'" aria-pressed="'+(f.m===c[0])+'">'+c[1]+'</button>';}).join('')+'</div>';
+  if(f.m==='custom')h+='<div class="dates"><label>Du<input type="date" id="dfrom" value="'+isoDate(R.from)+'" max="'+isoDate(today())+'"></label><label>Au<input type="date" id="dto" value="'+isoDate(R.to)+'" max="'+isoDate(today())+'"></label></div>';
+  return h+'<div class="small muted" style="margin:8px 0 14px">'+fmtDay(R.from)+' '+R.from.getFullYear()+' → '+fmtDay(R.to)+' '+R.to.getFullYear()+' · '+n+' activité'+(n>1?'s':'')+'</div>';
+}
+function vData(){
+  var all=dataActs(),sv=state.sv;
+  if(!(sv.url&&sv.key)||!all.length)return vActs();
+  var cw=curWk(),aggAll=weekAgg(all),tw=aggAll[cw]||{n:0,l:0,sec:0},pw=aggAll[cw-1]||{n:0,l:0,sec:0},h='',d0=wStart(cw);
+  h+='<div class="eyebrow" style="margin:0 0 8px">Cette semaine · '+fmtDay(d0)+' – '+fmtDay(addDays(d0,6))+'</div><div class="kpis">'+
+    kpi('Durée',fmtSec(tw.sec),dlt(tw.sec/60,pw.sec/60,function(q){return fh(Math.round(q));}))+
+    kpi('Séances',tw.n,dlt(tw.n,pw.n,String))+
+    kpi('Charge',tw.l||'0',dlt(tw.l,pw.l,String))+'</div>';
+  var R=dRange(all),acts=all.filter(function(a){var d=dayIdx(a);return d>=R.fi&&d<=R.ti;}),agg=weekAgg(acts);
+  h+=dFilterBar(R,acts.length);
+  if(!acts.length)return h+'<section class="card"><p class="muted" style="margin:0">Aucune activité sur cette période.</p></section>'+vActs(acts);
+  // forme (calculée sur tout l'historique, affichée sur la période)
+  var fs=fitSeries(all),view=fs?fs.filter(function(p){return p[0]>=R.fi&&p[0]<=R.ti;}):[];
+  if(view.length>=2){
+    var last=view[view.length-1],tsb=last[1]-last[2];
+    h+=dataCard('Forme','fitness · fatigue',
+      '<div class="kpis" style="margin-bottom:10px">'+kpi('Fitness',Math.round(last[1]),'charge à 6 sem.')+kpi('Fatigue',Math.round(last[2]),'charge à 7 j')+kpi('Forme',(tsb>0?'+':tsb<0?'−':'')+Math.abs(Math.round(tsb)),formLabel(tsb))+'</div>'+
+      '<div class="chartwrap">'+fitChart(view)+'</div>'+
+      '<div class="legend"><span><i style="background:#f5f4ef"></i>Fatigue</span><span><i style="background:#a9a8a0"></i>Fitness</span></div>'+
+      '<p class="small muted" style="margin:8px 0 0">Valeurs au '+fmtDay(addDays(PLAN_START,last[0]))+'. Forme = fitness − fatigue : positive = frais, très négative = risque de surcharge. Calcul d’intervals.icu à partir de la charge de chaque séance.</p>');
+  }
+  // volume hebdomadaire par discipline
+  var w0=Math.floor(R.fi/7),w1=Math.floor(R.ti/7),wks=[],w;
+  for(w=w0;w<=w1;w++)wks.push(w);
+  if(wks.length<2)wks=[w1-1,w1];
+  var sel=dsel!==null&&wks.indexOf(dsel)>=0?dsel:w1;
+  h+=dataCard('Volume par semaine','heures',
+    '<div class="chartwrap" data-wks="'+wks.join(',')+'">'+stackChart(wks,agg,sel)+'</div>'+
+    '<div class="legend" style="flex-wrap:wrap">'+['swim','bike','run','str'].map(function(k){return '<span><i style="background:'+SPCOL[k]+'"></i>'+SPLBL[k].split(' ')[0]+'</span>';}).join('')+'</div>'+
+    '<div class="readout" id="dro">'+weekReadout(agg,sel)+'</div>');
+  // zones de FC
+  var zt=[0,0,0,0,0,0,0];
+  acts.forEach(function(a){if(a.zt)a.zt.forEach(function(s,i){if(i<7)zt[i]+=s;});});
+  var zh=zonesHtml(zt,sv.hrz,false);
+  if(zh){
+    var zs=0,z12=zt[0]+zt[1],z4=0;zt.forEach(function(s,i){zs+=s;if(i>=3)z4+=s;});
+    h+=dataCard('Zones de fréquence cardiaque','période choisie',zh+'<p class="small muted" style="margin:8px 0 0">Zones 1–2 (endurance) : <b style="color:var(--t1)">'+pct(z12,zs)+' %</b> du temps · zones 4 et + (intensif) : <b style="color:var(--t1)">'+pct(z4,zs)+' %</b>. Pour l’Ironman, la grande majorité du volume se fait en endurance.</p>');
+  }
+  // disciplines
+  var tot=0;acts.forEach(function(a){tot+=a.d;});
+  ['swim','bike','run','str'].forEach(function(k){var s=sportStats(k,acts);if(s.n)h+=sportCard(k,s,tot);});
+  return h+vActs(acts);
+}
+
+/* ---------- Fiche détaillée d'une activité ---------- */
+var detCache={},detCur=null;
+function findAct(aid){var r=null;((state.sv&&state.sv.acts)||[]).forEach(function(x){if(String(x.id)===String(aid))r=x;});return r;}
+function actKpi(l,v){return '<div class="kpi"><div class="kl">'+l+'</div><div class="kv" style="font-size:17px">'+v+'</div></div>';}
+function tmTxt(sec){sec=Math.round(sec);return sec>=3600?Math.floor(sec/3600)+':'+('0'+Math.floor(sec%3600/60)).slice(-2)+':'+('0'+sec%60).slice(-2):Math.floor(sec/60)+':'+('0'+sec%60).slice(-2);}
+function lineSvg(vals,step,o){
+  var W=340,H=o.h||110,L=40,B=18,T=6,R=6,pts=[];
+  vals.forEach(function(v){if(v!=null&&isFinite(v))pts.push(v);});
+  if(pts.length<3)return '';
+  var srt=pts.slice().sort(function(a,b){return a-b;}),lo=srt[Math.floor(srt.length*0.03)],hi=srt[Math.min(srt.length-1,Math.floor(srt.length*0.97))];
+  if(hi-lo<1e-6){lo-=1;hi+=1;}
+  var pad=(hi-lo)*0.1;lo-=pad;hi+=pad;
+  var n=vals.length,x=function(i){return L+i*(W-L-R)/(n-1);},y=function(v){var f=Math.max(0,Math.min(1,(v-lo)/(hi-lo)));return T+(H-T-B)*(o.inv?f:1-f);};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.label)+'" data-ch="'+o.id+'">';
+  [0,0.5,1].forEach(function(f){
+    var v=lo+(hi-lo)*(o.inv?f:1-f),yy=T+(H-T-B)*f;
+    s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" stroke="#2c2c2e"/><text x="'+(L-5)+'" y="'+(yy+3.5)+'" text-anchor="end" font-size="10" fill="#85847d">'+o.fmt(v)+'</text>';
+  });
+  var d='',pen=false,gap=false,hp=[];
+  vals.forEach(function(v,i){
+    if(v==null||!isFinite(v)){pen=false;gap=true;return;}
+    d+=(pen?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);pen=true;
+    hp.push({x:x(i),dots:[[y(v),o.color]],tip:'<span class="tm">'+tmTxt(i*step)+'</span><br><b>'+o.tip(v)+'</b>'+(o.tipx?o.tipx(i):'')});
+  });
+  if(o.area&&!gap)s+='<path d="'+d+'L'+x(n-1)+' '+(H-B)+'L'+x(0)+' '+(H-B)+'Z" fill="'+o.color+'" fill-opacity=".14"/>';
+  s+='<path d="'+d+'" fill="none" stroke="'+o.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  var dur=(n-1)*step/60,tm=[1,2,5,10,15,20,30,60,120].filter(function(m){return dur/m<=5;})[0]||120,t;
+  for(t=0;t<=dur+1e-9;t+=tm)s+='<text x="'+(L+(t*60/step)*(W-L-R)/(n-1))+'" y="'+(H-4)+'" text-anchor="middle" font-size="10" fill="#85847d">'+(t>=60&&tm>=60?Math.round(t/60)+' h':Math.round(t)+(t===0?' min':''))+'</text>';
+  CH[o.id]={W:W,H:H,T:T,B:B,pts:hp};
+  return s+hvLayer()+'</svg>';
+}
+function chartCard(title,sub,svg){return svg?'<div class="card" style="background:var(--card2);padding:14px;margin:0 0 12px"><div class="dh">'+title+(sub?'<small>'+sub+'</small>':'')+'</div><div class="chartwrap">'+svg+'</div></div>':'';}
+function splitsHtml(k,sp){
+  var L=sp.l;if(!L||!L.length)return '';
+  var maxV=0;L.forEach(function(x){x.v=x.d/Math.max(1,x.t);maxV=Math.max(maxV,x.v);});
+  var h='<div class="spl" style="color:var(--t2);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em"><span>'+(k==='run'?'km':'tronçon')+'</span><span></span><span>'+(k==='run'?'allure':'vitesse')+'</span><span>FC</span></div>';
+  L.forEach(function(x,i){
+    var full=Math.abs(x.d-sp.u)<2,lab=full?(k==='run'?String(i+1):String((i+1)*sp.u/1000)):(x.d/1000).toFixed(1).replace('.',',')+' km';
+    h+='<div class="spl"><span>'+lab+(full&&k==='ride'?' km':'')+'</span><span><span class="b" style="display:block;width:'+Math.round(35+65*x.v/maxV)+'%;--c:'+SPCOL[k==='ride'?'bike':'run']+'"></span></span><span>'+(k==='run'?mmss(x.t*1000/x.d)+' /km':(x.v*3.6).toFixed(1).replace('.',',')+' km/h')+'</span><span>'+(x.h||'–')+'</span></div>';
+  });
+  return h;
+}
+function ivHtml(iv){
+  var work=iv.filter(function(x){return x.k==='W';});
+  if(!work.length)return '';
+  var n=0,h='<div class="ivr h"><span>#</span><span>Distance</span><span>Temps</span><span>Allure</span><span>FC</span></div>';
+  iv.forEach(function(x){
+    if(x.k==='R'){if(x.t>=5)h+='<div class="ivr rest" style="grid-template-columns:1fr"><span>Repos '+(x.t<120?x.t+' s':mmss(x.t))+'</span></div>';return;}
+    n++;
+    h+='<div class="ivr"><span>'+n+'</span><span>'+x.d+' m</span><span>'+mmss(x.t)+'</span><span>'+(x.d>0?mmss(x.t/x.d*100):'–')+'</span><span>'+(x.h||'–')+'</span></div>';
+  });
+  return h;
+}
+function detMore(a,j){
+  var k=skey(a),s=j.s,h='';
+  var paceAt=function(i){var v=s&&s.v&&s.v[i];if(!(v>0.3))return '';return '<br>'+(k==='run'?(v>0.8?mmss(1000/v)+' /km':''):k==='bike'?(v*3.6).toFixed(1).replace('.',',')+' km/h':k==='swim'?mmss(100/v)+' /100 m':'');};
+  var hrAt=function(i){var v=s&&s.h&&s.h[i];return v?'<br>'+Math.round(v)+' bpm':'';};
+  if(s&&s.h&&s.h.some(Boolean))h+=chartCard('Fréquence cardiaque','bpm · minutes',lineSvg(s.h,s.step,{id:'d-hr',color:'#f5f4ef',label:'Fréquence cardiaque au cours de l’activité',fmt:function(v){return Math.round(v);},tip:function(v){return Math.round(v)+' bpm';},tipx:paceAt}));
+  if(s&&s.v){
+    if(k==='run')h+=chartCard('Allure','min/km',lineSvg(s.v.map(function(v){return v>0.8?1000/v:null;}),s.step,{id:'d-pace',color:SPCOL.run,inv:true,label:'Allure au cours de la course',fmt:function(v){return mmss(v);},tip:function(v){return mmss(v)+' /km';},tipx:hrAt}));
+    else if(k==='bike')h+=chartCard('Vitesse','km/h',lineSvg(s.v.map(function(v){return v>0.3?v*3.6:null;}),s.step,{id:'d-pace',color:SPCOL.bike,label:'Vitesse au cours de la sortie',fmt:function(v){return Math.round(v);},tip:function(v){return v.toFixed(1).replace('.',',')+' km/h';},tipx:hrAt}));
+    else if(k==='swim')h+=chartCard('Allure','/100 m',lineSvg(s.v.map(function(v){return v>0.3?100/v:null;}),s.step,{id:'d-pace',color:SPCOL.swim,inv:true,label:'Allure de nage',fmt:function(v){return mmss(v);},tip:function(v){return mmss(v)+' /100 m';},tipx:hrAt}));
+  }
+  if(s&&s.a&&(k==='run'||k==='bike')&&a.z>5)h+=chartCard('Altitude','m',lineSvg(s.a,s.step,{id:'d-alt',color:'#98989f',area:true,h:90,label:'Profil d’altitude',fmt:function(v){return Math.round(v);},tip:function(v){return Math.round(v)+' m';},tipx:hrAt}));
+  if(j.sp&&j.sp.l&&j.sp.l.length>1)h+=chartCard(k==='run'?'Allure par kilomètre':'Vitesse par tranche de '+(j.sp.u/1000)+' km','',splitsHtml(k==='run'?'run':'ride',j.sp));
+  if(k==='swim'&&j.iv&&j.iv.length)h+=chartCard('Séries','distance · temps · allure /100 m',ivHtml(j.iv));
+  return h||'<p class="small muted">Pas de détail supplémentaire pour cette activité.</p>';
+}
+function actDetailBody(a){
+  var k=skey(a),sid=LK.a2s[a.id],s=sid&&SBY[sid],h='<div class="kpis">';
+  h+=actKpi('Durée',fh(Math.round(a.d/60)));
+  if(a.m>0)h+=actKpi('Distance',km(a.m)+' km');
+  if(k==='run'||k==='swim'||k==='bike')h+=actKpi(k==='bike'?'Vitesse':'Allure',paceTxt(k,a.m,a.d));
+  if(a.h)h+=actKpi('FC moyenne',a.h+' bpm');
+  if(a.x)h+=actKpi('FC max',a.x+' bpm');
+  if(a.z>0&&k!=='swim')h+=actKpi('Dénivelé +',a.z+' m');
+  if(a.c>0)h+=actKpi('Cadence',k==='run'?Math.round(a.c*2)+' spm':k==='swim'?Math.round(a.c)+' mvt/min':Math.round(a.c)+' tr/min');
+  if(a.w)h+=actKpi('Puissance',a.w+' W');
+  if(a.k)h+=actKpi('Calories',a.k+' kcal');
+  if(a.l)h+=actKpi('Charge',a.l);
+  if(a.e>a.d+60)h+=actKpi('Temps écoulé',fh(Math.round(a.e/60)));
+  h+='</div>';
+  if(s){
+    var pr=k==='swim'&&s.m?Math.round(a.m/s.m*100):Math.round(a.d/60/Math.max(1,s.min)*100);
+    h+='<div class="act" style="margin:0 0 12px"><b>Séance du plan</b><div class="an">'+esc(s.title)+'</div><div class="small muted" style="margin-bottom:8px">'+esc(sessLabel(s))+' · prévu '+fh(s.min)+(s.m?' · '+km(s.m)+' km':'')+' · réalisé <b style="color:var(--t1)">'+pr+' %</b></div>'+bar(Math.min(100,pr),SPCOL[k]||null)+'</div>';
+  }
+  var zh=zonesHtml(a.zt,state.sv.hrz,true);
+  if(zh)h+='<div class="card" style="background:var(--card2);padding:14px;margin:0 0 12px"><div class="dh">Zones de fréquence cardiaque</div>'+zh+'</div>';
+  h+='<div id="det-more">'+(detCache[a.id]?detMore(a,detCache[a.id]):'<p class="small muted">Chargement du détail…</p>')+'</div>';
+  if(dayIdx(a)>=0&&actSport(a))h+='<button class="btn" data-act="actdetail" data-aid="'+esc(a.id)+'">'+(s?'Changer la séance associée':'Associer à une séance du plan')+'</button>';
+  return h;
+}
+function openActDetail(aid){
+  var a=findAct(aid);if(!a)return;
+  detCur=a.id;
+  showSheet(a.n||a.t,actDate(a)+(a.dv?' · '+a.dv:''),actDetailBody(a));
+  if(detCache[a.id])return;
+  svFetch('/api/activity?id='+encodeURIComponent(a.id))
+    .then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);return r.json();})
+    .then(function(j){detCache[a.id]=j;var el=document.getElementById('det-more');if(detCur===a.id&&el)el.innerHTML=detMore(a,j);})
+    .catch(function(e){var el=document.getElementById('det-more'),m=(e&&e.message)||'';if(detCur===a.id&&el)el.innerHTML='<p class="small muted">Détail indisponible ('+esc(m==='Failed to fetch'||m==='Load failed'?'hors ligne':m)+').</p>';});
+}
+
 /* ---------- Garmin : feuilles de choix, synchronisation ---------- */
 function showSheet(title,sub,body){
   var sh=document.getElementById('sheet');
@@ -1160,7 +1563,7 @@ function openAllActs(){
       var mo=MONTHS_L[d.getMonth()]+' '+d.getFullYear();
       if(mo!==cur){cur=mo;b+='<h4>'+mo+'</h4>';}
       var k=actSport(a),sid=LK.a2s[a.id],s=sid&&SBY[sid],lab=s?'→ '+sessLabel(s):(k?SPN[k]:(a.t||'Autre')),inner='<span class="sr-t"><b>'+esc(a.n||a.t)+'</b><small>'+esc(actDate(a)+' · '+actLine(a))+'</small></span><span class="sr-b'+(s?' ok':'')+'">'+esc(lab)+'</span>';
-      b+=dayIdx(a)>=0&&k?'<button class="srow" data-act="picksess" data-aid="'+esc(a.id)+'">'+inner+'</button>':'<div class="srow">'+inner+'</div>';
+      b+='<button class="srow" data-act="actdetail" data-aid="'+esc(a.id)+'">'+inner+'</button>';
     });
   }
   showSheet('Mes activités',acts.length+' activité'+(acts.length>1?'s':'')+' depuis janvier 2026',b);
@@ -1185,7 +1588,7 @@ function syncActs(force,loud){
     .then(function(r){if(!r.ok)throw new Error(r.status===401?'Clé invalide':'Erreur serveur ('+r.status+')');return r.json();})
     .then(function(j){
       var acts=j.activities||[],changed=JSON.stringify(acts)!==JSON.stringify(sv.acts||[])||sv.conn!==!!j.connected||!!sv.err||(sv.werr||'')!==(j.error||'');
-      sv.acts=acts;sv.conn=!!j.connected;sv.werr=j.error||'';sv.t=Date.now();sv.err='';save();
+      sv.acts=acts;if(j.meta&&j.meta.hrz)sv.hrz=j.meta.hrz;sv.conn=!!j.connected;sv.werr=j.error||'';sv.t=Date.now();sv.err='';save();
       if(loud)toast('Activités synchronisées');
       if(changed||loud)safeRender();
     })
@@ -1198,8 +1601,8 @@ function syncActs(force,loud){
 function svSettings(){
   var sv=state.sv;
   return '<h4>Garmin (synchronisation automatique)</h4><p>Garmin Connect envoie tes activités à intervals.icu ; ton serveur les lit et l’app coche tes séances. Renseigne l’adresse du serveur et ta clé d’accès (voir SETUP-GARMIN.md). Astuce : colle « adresse|clé » dans le premier champ.</p>'+
-    '<label class="inp wide"><span>Adresse du serveur</span><input id="sv-url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://ironman-strava.….workers.dev" value="'+esc(sv.url||'')+'"></label>'+
-    '<label class="inp wide"><span>Clé d’accès</span><input id="sv-key" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" value="'+esc(sv.key||'')+'"></label>'+
+    '<label class="inp wide"><span>Adresse du serveur</span><input id="sv-url" name="ironman-server-url" autocomplete="off" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://ironman-strava.….workers.dev" value="'+esc(sv.url||'')+'"></label>'+
+    '<label class="inp wide"><span>Clé d’accès</span><input id="sv-key" type="text" name="ironman-app-key" autocomplete="off" data-lpignore="true" style="-webkit-text-security:disc;text-security:disc" autocapitalize="off" autocorrect="off" spellcheck="false" value="'+esc(sv.key||'')+'"></label>'+
     '<button class="btn pri" data-act="svresync">Tester et resynchroniser</button>'+
     '<p class="small muted">'+(sv.t?'Dernière synchro : '+ago(sv.t)+'. ':'')+esc(sv.err||'')+' '+esc(sv.werr||'')+'</p>';
 }
