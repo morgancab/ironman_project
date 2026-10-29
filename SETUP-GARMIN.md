@@ -45,10 +45,10 @@ Dans un terminal, dans le dossier `strava-worker` (ce dossier garde son nom d'or
 
 ## 4. Dans l'app
 
-Sur l'iPhone, ouvre l'app installée → engrenage du Dashboard → **Garmin** : colle `https://ironman-strava….workers.dev|TA_APP_KEY`
+Sur l'iPhone, ouvre l'app installée → bouton réglages en haut à droite de l'**Accueil** (ou onglet **Plus → Réglages**) → **Connexion Garmin** : colle `https://ironman-strava….workers.dev|TA_APP_KEY`
 dans « Adresse du serveur » (les deux champs se remplissent), puis touche **Tester et resynchroniser**.
 
-La carte **Garmin** du Dashboard indique l'état (Connecté / Problème) et liste tes dernières activités.
+Le bloc **Dernières activités** de l'Accueil indique l'état de la synchro et liste tes dernières sorties (liste complète dans l'onglet **Données**).
 Ensuite, plus rien à faire : l'app se met à jour à l'ouverture et toutes les 2 minutes.
 
 ## Fonctionnement du cochage
@@ -61,7 +61,7 @@ Ensuite, plus rien à faire : l'app se met à jour à l'ouverture et toutes les 
 - Durée et distance **réelles** alimentent le volume réalisé.
 
 **Corriger une association** : ouvre la séance (onglet Semaine) → **Changer** / **Dissocier** / **Associer une activité Garmin**,
-ou, dans la carte Garmin du Dashboard, touche une activité pour choisir sa séance (« Ne pas associer » l'ignore,
+ou, dans **Dernières activités** (Accueil) ou en bas de l'onglet **Données**, touche une activité pour choisir sa séance (« Ne pas associer » l'ignore,
 « Automatique » rétablit le choix automatique). Décocher une séance liée la dissocie ; une séance cochée à la main n'est jamais écrasée.
 
 ## En cas de problème
