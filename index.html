@@ -447,6 +447,40 @@ h1{font-size:32px;letter-spacing:-.035em}
 #view.slide-r{animation:slideR .28s cubic-bezier(.2,.8,.2,1)}
 @keyframes slideL{from{opacity:.2;transform:translateX(36px)}to{opacity:1;transform:none}}
 @keyframes slideR{from{opacity:.2;transform:translateX(-36px)}to{opacity:1;transform:none}}
+/* mode vacances / week-end */
+.mc.adp{background:rgba(255,214,10,.15);color:#ffd60a}
+.adp-n{background:rgba(255,214,10,.08)!important}
+.adp-n>b{color:#ffd60a!important}
+.arow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--sep);font-size:13.5px;line-height:1.35}
+.arow:last-child{border-bottom:0}
+.arow .ad{flex:none;width:52px;color:var(--t2);font-size:12px;font-weight:700;padding-top:1px}
+.arow .ar{flex:1;min-width:0}
+.mvto{margin-top:4px;color:#ffd60a;font-size:13px}
+.mvto b{color:#ffd60a;font-weight:700}
+.arow s{color:var(--t3);text-decoration-color:rgba(255,255,255,.3)}
+.arow b{font-weight:650}
+/* calendrier de période */
+.cal{background:var(--card2);border-radius:20px;padding:12px 10px 10px}
+.sheet .cal{background:var(--card3)}
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+.cal-h b{font-size:16px;text-transform:capitalize}
+.cal-h .iconbtn{width:36px;height:36px;background:rgba(255,255,255,.07)}
+.cal-h .iconbtn:disabled{opacity:.3}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.cal-w{font-size:11px;color:var(--t3);text-align:center;padding:4px 0 6px;font-weight:700}
+.cd{border:0;background:none;color:var(--t1);height:40px;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;padding:0;border-radius:0}
+.cd span{display:grid;place-items:center;width:36px;height:36px;margin:auto;border-radius:50%}
+.cd.in{background:rgba(255,255,255,.11)}
+.cd.st{background:linear-gradient(90deg,transparent 50%,rgba(255,255,255,.11) 50%)}
+.cd.en{background:linear-gradient(90deg,rgba(255,255,255,.11) 50%,transparent 50%)}
+.cd.one{background:none}
+.cd.st span,.cd.en span{background:var(--t1);color:#000}
+.cd.td:not(.st):not(.en) span{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.cd.dis{opacity:.22;pointer-events:none}
+.cd.we:not(.st):not(.en){color:var(--t2)}
+.cal-s{margin:12px 0 10px;font-size:14px;color:var(--t2);min-height:20px}
+.cal-s b{color:var(--t1)}
+.cal-hint{display:inline-block;margin-left:8px;color:#ffd60a;font-size:12.5px;font-weight:600}
 @media (prefers-reduced-motion:reduce){#view.slide-l,#view.slide-r{animation:none}.skel i{animation:none}#view.enter>*{animation:none}html{scroll-behavior:auto}}
 </style>
 </head>
@@ -1134,7 +1168,7 @@ function vHome(){
 function mrow(icon,t,sub,act,attrs){return '<button class="mrow" data-act="'+act+'" '+(attrs||'')+'><span class="mi">'+ic(icon,22)+'</span><span style="flex:1;min-width:0"><b>'+t+'</b><small>'+sub+'</small></span>'+ic('right',18)+'</button>';}
 function vMore(){
   return topbar('Ironman 2027','Plus',false)+
-    '<div class="menu">'+mrow('plan','25 semaines','Vue d’ensemble des blocs et des phases','tab','data-tab="plan"')+mrow('notes','Notes & ressenti','Fatigue, sensations, douleurs','tab','data-tab="notes"')+'</div>'+
+    '<div class="menu">'+mrow('plan','25 semaines','Vue d’ensemble des blocs et des phases','tab','data-tab="plan"')+mrow('notes','Notes & ressenti','Fatigue, sensations, douleurs','tab','data-tab="notes"')+mrow('week','Vacances & week-ends',awayList().length?awayList().length+' période'+(awayList().length>1?'s':'')+' enregistrée'+(awayList().length>1?'s':''):'Alléger le plan pendant une absence','awaylist')+'</div>'+
     '<div class="menu">'+mrow('gear','Réglages','Garmin, repères d’entraînement, sauvegarde','settings')+'</div>'+
     '<p class="small muted" style="text-align:center;margin:18px 0 4px;line-height:1.6">Ironman des Sables d’Olonne<br>'+esc(fmtLong(RACE_DATE))+'<br>Plan de '+NW+' semaines · du '+fmtDay(PLAN_START)+' au '+fmtDay(RACE_DATE)+'</p>';
 }
@@ -1154,6 +1188,223 @@ function autoSummary(){
 /* ---------- Détail d'une séance : déroulé par blocs (durée, nom, pastilles de cibles) + conseils ---------- */
 var TOKN={R:{soft:'Facile',z2:'Endurance',tempo:'Tempo',im:'Allure Ironman'},B:{soft:'Facile',z2:'Endurance',ft:'Force-endurance',sw:'Sweet spot',im:'Allure Ironman'},S:{easy:'Souple',end:'Aisé',im:'Allure Ironman',css:'Seuil',fast:'Rapide'}};
 function durTxt(n,u){return u==='m'?(n<60?n+' min':fm(n)):u==='s'?n+' s':u==='mtr'?n+' m':n+' km';}
+/* ---------- Mode vacances / week-end ----------
+   Une période (dates + intensité + matériel dispo) remplace, pendant ces jours, chaque séance par sa variante « récupération »
+   générée par les mêmes constructeurs que le plan (mêmes cibles, même envoi Garmin, même rapprochement). Les séances sont modifiées
+   sur place ; s.orig garde l'original pour revenir en arrière à tout moment. La semaine de course n'est jamais modifiée. */
+var AWAY_F={light:0.7,min:0.4},AWAY_N={same:'Identique',light:'Allégé',min:'Minimum',off:'Repos'},awayDraft=null;
+function r5(n){return Math.round(n/5)*5;}
+function awayRun(w,ph,min,f){return runMid(w,'rec',ph,Math.max(20,Math.min(60,r5(min*f*0.6))));}
+// la séance est-elle faisable sur place (matériel dispo, pas en repos) ?
+function awayFeasible(o,p){return p.mode!=='off'&&!(o.sp==='swim'&&!p.pool)&&!((o.sp==='bike'||o.sp==='brick')&&!p.bike);}
+function adaptFields(o,p){
+  if(o.sp==='rest'||o.sp==='race'||o.w>=NW)return null;
+  var w=o.w,v=VOL[w-1],kind=META[w-1][0],ph=phaseOf(w).k,f=AWAY_F[p.mode],n;
+  if(p.mode==='off')return restDay(w);
+  if(p.mode==='same'){
+    if(awayFeasible(o,p))return null;
+    // même intensité : le matériel manque, on garde la logique de la séance sous forme de course
+    if(o.sp==='swim')return runMid(w,kind,ph,Math.max(40,Math.min(75,r5(o.min*0.9))));
+    if(o.sp==='bike')return (o.d===2?runMid:runLong)(w,kind,ph,Math.max(40,Math.min(90,r5(o.min*0.6))));
+    if(o.sp==='brick')return runMid(w,'rec',ph,Math.max(15,o.min));
+    return null;
+  }
+  if(o.sp==='swim'){
+    if(!p.pool)return awayRun(w,ph,o.min,f);
+    n=Math.max(800,Math.round(v[o.d===1?0:1]*f/100)*100);
+    return (o.d===1?swimA:swimB)(w,'rec',ph,n);
+  }
+  if(o.sp==='bike'){
+    if(!p.bike)return awayRun(w,ph,o.min,f);
+    return (o.d===2?bikeMid:bikeLong)(w,'rec',ph,Math.max(30,r5(v[o.d===2?2:4]*f)));
+  }
+  if(o.sp==='brick')return runMid(w,'rec',ph,Math.max(15,r5(v[5]*f)));
+  if(o.sp==='run')return (o.d===3?runMid:runLong)(w,'rec',ph,Math.max(25,r5(v[o.d===3?3:6]*f)));
+  if(o.sp==='str')return strength(w,'rec',ph,Math.max(15,r5(v[7]*f)));
+  return null;
+}
+function copySess(s){var c={};Object.keys(s).forEach(function(k){c[k]=s[k];});return c;}
+function awayList(){return state.ui.away||[];}
+var ORIGPOS={},AWAY_SPAN=8,AWAY_CAP=200;
+function gday(g){return PLAN[Math.floor(g/7)].days[g%7].sessions;}
+// séance d'origine, avec son vrai jour de départ (w, d) même si elle a déjà été déplacée
+function awaySrc(s){var pos=ORIGPOS[s.id]||{w:s.w,d:s.d};return Object.assign({},s.orig||s,{w:pos.w,d:pos.d});}
+// Plan d'une période (sans rien modifier) : pour chaque séance de la période, sa version adaptée et, si besoin, le jour (global) où la reporter
+function planAway(p){
+  var a=parseYmd(p.from),b=parseYmd(p.to),ops=[];
+  if(!a||!b||b<a)return null;
+  var fi=idxOfDate(a),ti=idxOfDate(b),N=NW*7,tod=idxOfDate(today()),g,extra={},movers=[];
+  var mp={mode:p.mode==='off'?'same':p.mode,pool:true,bike:true};
+  var load=function(x){var t=extra[x]||0;gday(x).forEach(function(s){if(s.sp!=='rest')t+=s.min;});return t;};
+  for(g=Math.max(0,fi);g<=Math.min(N-1,ti);g++){
+    if(Math.floor(g/7)+1>=NW)continue;
+    gday(g).forEach(function(s){
+      var src=awaySrc(s);if(src.sp==='rest'||src.sp==='race')return;
+      var op={s:s,src:src,d0:g,nf:null,to:null};
+      if(p.move==='out'&&!awayFeasible(src,p)){op.nf=adaptFields(src,mp);movers.push(op);}
+      else op.nf=adaptFields(src,p);
+      ops.push(op);
+    });
+  }
+  if(movers.length){
+    var cand=[];
+    for(g=Math.max(0,fi-AWAY_SPAN,tod);g<=Math.min(N-1,ti+AWAY_SPAN);g++){
+      if(g>=fi&&g<=ti)continue;
+      var wk=PLAN[Math.floor(g/7)];if(wk.n>=NW)continue;
+      if(wk.layout[g%7].every(function(x){return (x.orig||x).sp==='rest';}))continue;   // on ne touche pas aux jours de repos
+      cand.push(g);
+    }
+    movers.sort(function(x,y){return y.src.min-x.src.min;}).forEach(function(op){
+      var pair=op.src.sp==='brick'?movers.filter(function(q){return q.src.sp==='bike'&&q.d0===op.d0&&q.to!==null;})[0]:null,m=op.nf?op.nf.min:op.src.min;
+      if(pair){op.to=pair.to;extra[pair.to]=(extra[pair.to]||0)+m;return;}
+      var best=null,bc=1e9;
+      cand.forEach(function(c){
+        var l=load(c),cost=l+25*(c<fi?fi-c:c-ti)+(l+m>AWAY_CAP?100:0);
+        if(cost<bc){bc=cost;best=c;}
+      });
+      if(best===null){op.nf=adaptFields(op.src,p);return;}            // aucun jour disponible : version adaptée sur place
+      op.to=best;extra[best]=(extra[best]||0)+m;
+    });
+  }
+  return ops;
+}
+function moveSess(s,to,from,p){
+  var arr=gday(s.w*7-7+s.d),i=arr.indexOf(s);
+  if(i>=0)arr.splice(i,1);
+  s.w=Math.floor(to/7)+1;s.d=to%7;gday(to).push(s);
+  s.moved={from:from,pid:p.id,label:p.label};
+}
+// skip : identifiant d'une période à ignorer (aperçu en cours de modification)
+function applyAway(skip){
+  PLAN.forEach(function(wk){if(!wk.layout){wk.layout=wk.days.map(function(day){return day.sessions.slice();});wk.layout.forEach(function(l,i){l.forEach(function(s){ORIGPOS[s.id]={w:wk.n,d:i};});});}});
+  ALLS.forEach(function(s){
+    if(!s.orig)return;
+    var o=s.orig;Object.keys(s).forEach(function(k){delete s[k];});Object.assign(s,o);
+  });
+  PLAN.forEach(function(wk){wk.days.forEach(function(day,i){day.sessions=wk.layout[i].slice();day.sessions.forEach(function(s){s.w=wk.n;s.d=i;delete s.moved;});});});
+  awayList().forEach(function(p){
+    if(p.id===skip)return;
+    var ops=planAway(p);if(!ops)return;
+    ops.forEach(function(op){
+      var s=op.s;
+      if(op.nf){
+        var snap=s.orig||copySess(s),id=snap.id,w=s.w,d=s.d;
+        Object.keys(s).forEach(function(k){delete s[k];});
+        Object.assign(s,op.nf,{id:id,w:w,d:d,orig:snap,adapt:{mode:p.mode,label:p.label,pid:p.id}});
+      }
+      if(op.to!==null){var pos=ORIGPOS[s.id];moveSess(s,op.to,(pos.w-1)*7+pos.d,p);}
+    });
+  });
+  PLAN.forEach(function(wk){
+    wk.min=0;wk.m=0;wk.count=0;
+    wk.days.forEach(function(day){day.sessions.forEach(function(s){if(s.sp!=='rest'){wk.count++;wk.min+=s.min;wk.m+=s.m;}});});
+  });
+}
+function newAwayDraft(wn,type){
+  var mon=PLAN[Math.max(0,Math.min(NW-1,wn-1))].start,vac=type==='vacances';
+  return {id:'',type:type,label:vac?'Vacances':'Week-end',from:isoDate(vac?mon:addDays(mon,4)),to:isoDate(addDays(mon,6)),mode:vac?'min':'same',move:vac?'none':'out',pool:true,bike:true};
+}
+var dcalM=null,dcalPend=false;
+function calHtml(ns,from,to,minD,maxD,cy,cm){
+  var first=new Date(cy,cm,1),off=(first.getDay()+6)%7,dim=new Date(cy,cm+1,0).getDate(),t=today(),f=parseYmd(from),e=parseYmd(to),i,g='';
+  var prevOk=new Date(cy,cm,0)>=minD,nextOk=new Date(cy,cm+1,1)<=maxD;
+  ['L','M','M','J','V','S','D'].forEach(function(x){g+='<div class="cal-w">'+x+'</div>';});
+  for(i=0;i<off;i++)g+='<div></div>';
+  for(i=1;i<=dim;i++){
+    var dt=new Date(cy,cm,i),iso=isoDate(dt),dis=dt<minD||dt>maxD,inr=f&&e&&dt>=f&&dt<=e,st=f&&dt.getTime()===f.getTime(),en=e&&dt.getTime()===e.getTime(),wd=(dt.getDay()+6)%7;
+    g+='<button class="cd'+(dis?' dis':'')+(inr?' in':'')+(st?' st':'')+(en?' en':'')+(st&&en?' one':'')+(dt.getTime()===t.getTime()?' td':'')+(wd>=5?' we':'')+'" data-act="calday" data-ns="'+ns+'" data-d="'+iso+'" aria-label="'+esc(fmtLong(dt))+'" aria-pressed="'+!!inr+'"'+(dis?' disabled':'')+'><span>'+i+'</span></button>';
+  }
+  return '<div class="cal"><div class="cal-h"><button class="iconbtn" data-act="calnav" data-ns="'+ns+'" data-v="-1" aria-label="Mois précédent"'+(prevOk?'':' disabled')+'>'+ic('left',18)+'</button><b>'+MONTHS_L[cm]+' '+cy+'</b><button class="iconbtn" data-act="calnav" data-ns="'+ns+'" data-v="1" aria-label="Mois suivant"'+(nextOk?'':' disabled')+'>'+ic('right',18)+'</button></div><div class="cal-g">'+g+'</div></div>';
+}
+// 1re touche : début ; 2e touche : fin (les dates s'ordonnent toutes seules)
+function calPick(from,to,pending,iso){
+  if(pending){var a=from<=iso?from:iso,b=from<=iso?iso:from;return {from:a,to:b,pending:false};}
+  return {from:iso,to:iso,pending:true};
+}
+function awayCalInit(d){var f=parseYmd(d.from)||PLAN_START;d.cal={y:f.getFullYear(),m:f.getMonth()};d.pending=false;return d;}
+function awayDates(p){
+  var f=parseYmd(p.from),t=parseYmd(p.to),dn=function(d){return DAYS[(d.getDay()+6)%7].slice(0,3).toLowerCase()+' '+fmtDay(d);},n=f&&t?diffDays(t,f)+1:0;
+  if(!p.cal)awayCalInit(p);
+  return '<div class="eyebrow" style="margin:18px 0 8px">Dates</div><div class="rng" role="group" aria-label="Raccourcis">'+[['weekend','Week-end'],['week','Semaine'],['2weeks','2 semaines']].map(function(x){return '<button data-act="calpreset" data-v="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>'+
+    '<div class="cal-s">'+(f&&t?'<b>'+dn(f)+'</b> → <b>'+dn(t)+'</b> · '+n+' jour'+(n>1?'s':''):'')+(p.pending?'<span class="cal-hint">Touche le dernier jour</span>':'')+'</div>'+
+    calHtml('away',p.from,p.to,PLAN_START,RACE_DATE,p.cal.y,p.cal.m);
+}
+function awayPreset(p,v){
+  var a=parseYmd(p.from)||PLAN_START,mon=addDays(a,-((a.getDay()+6)%7)),lo=PLAN_START,hi=RACE_DATE;
+  var cl=function(d){return d<lo?lo:d>hi?hi:d;},r={weekend:[4,6],week:[0,6],'2weeks':[0,13]}[v];
+  p.from=isoDate(cl(addDays(mon,r[0])));p.to=isoDate(cl(addDays(mon,r[1])));p.touched=true;awayCalInit(p);
+}
+function awayPreview(p){
+  applyAway(p.id);
+  var ops=planAway(p),rows=[],saved=0,moved=0;
+  if(ops){
+    ops.forEach(function(op){
+      if(!op.nf&&op.to===null)return;
+      rows.push({d:addDays(PLAN_START,op.d0),src:op.src,nf:op.nf,to:op.to===null?null:addDays(PLAN_START,op.to)});
+      if(op.nf)saved+=op.src.min-op.nf.min;if(op.to!==null)moved++;
+    });
+  }
+  applyAway();
+  return {rows:rows,saved:saved,moved:moved,bad:!ops};
+}
+function awayLine(x){return esc(x.title)+(x.sp==='rest'?'':' · '+fh(x.min));}
+function renderAway(){
+  var p=awayDraft,sh=document.getElementById('sheet'),st=sh.scrollTop,pv=awayPreview(p);
+  var seg=function(act,key,opts){return '<div class="rng" role="group">'+opts.map(function(o){return '<button data-act="'+act+'" data-v="'+o[0]+'" aria-pressed="'+(p[key]===o[0])+'">'+o[1]+'</button>';}).join('')+'</div>';};
+  var b='<div class="eyebrow" style="margin:0 0 8px">Type</div>'+seg('awaytype','type',[['weekend','Week-end'],['vacances','Vacances']])+
+    awayDates(p)+
+    '<div class="eyebrow" style="margin:18px 0 8px">Intensité</div>'+seg('awaymode','mode',[['same','Identique'],['light','Allégé'],['min','Minimum'],['off','Repos']])+
+    '<p class="small muted" style="margin:8px 0 0">'+({same:'Séances inchangées : seul le matériel manquant les modifie.',light:'Environ −30 % : mêmes jours, séances plus courtes et faciles, plus d’intensité.',min:'Environ −60 % : un simple entretien, séances courtes et faciles.',off:'Aucune séance pendant la période.'})[p.mode]+'</p>';
+  if(p.mode!=='off')b+='<div class="eyebrow" style="margin:18px 0 8px">Matériel sur place</div><div class="rng"><button data-act="awayeq" data-v="pool" aria-pressed="'+!!p.pool+'">Piscine</button><button data-act="awayeq" data-v="bike" aria-pressed="'+!!p.bike+'">Vélo</button></div><p class="small muted" style="margin:8px 0 0">Sans piscine ou sans vélo, la séance est remplacée par un footing'+(p.mode==='same'?' de même logique':' facile')+'.</p>';
+  b+='<div class="eyebrow" style="margin:18px 0 8px">Séances impossibles sur place</div>'+seg('awaymove','move',[['none','Les remplacer'],['out','Les reporter']])+
+    '<p class="small muted" style="margin:8px 0 0">'+(p.move==='out'?'Les séances que tu ne peux pas faire (matériel absent, ou repos) sont déplacées sur les jours autour de la période (jusqu’à 8 jours avant ou après), les moins chargés d’abord, sans toucher aux jours de repos. Elles gardent leur contenu.':'Elles restent sur leur jour, remplacées par une version adaptée (ou du repos).')+'</p>';
+  b+='<div class="card ad-ch" style="margin:18px 0 14px"><div class="dh"><span>Aperçu</span>'+(pv.bad?'':'<span class="dstat">'+pv.rows.length+' séance'+(pv.rows.length>1?'s':'')+(pv.saved?' · <b>'+(pv.saved>=0?'−':'+')+fh(Math.abs(pv.saved))+'</b>':'')+'</span>')+'</div>';
+  if(pv.bad)b+='<p class="small muted" style="margin:0">Vérifie les dates.</p>';
+  else if(!pv.rows.length)b+='<p class="small muted" style="margin:0">Aucune séance modifiée sur ces dates.</p>';
+  else pv.rows.forEach(function(r){
+    var dn=function(d){return DAYS[(d.getDay()+6)%7].slice(0,3)+' '+dnum(d);},dl=function(d){return DAYS[(d.getDay()+6)%7]+' '+fmtDay(d);};
+    b+='<div class="arow"><span class="ad">'+dn(r.d)+'</span><span class="ar">'+(r.nf?'<s>'+awayLine(r.src)+'</s><br><b>'+(r.nf.sp==='rest'?'Repos':awayLine(r.nf))+'</b>':'<b>'+awayLine(r.src)+'</b>')+(r.to?'<div class="mvto">→ Reportée au <b>'+dl(r.to)+'</b></div>':'')+'</span></div>';
+  });
+  b+='</div><button class="btn pri" data-act="awaysave" style="margin:0 0 10px">'+(p.id?'Enregistrer':'Activer')+'</button>'+(p.id?'<button class="btn dng" data-act="awaydel">Supprimer la période</button>':'<button class="btn" data-act="closesheet">Annuler</button>');
+  showSheet(p.id?'Modifier la période':'Vacances / week-end','Le plan s’adapte, tu peux revenir en arrière à tout moment',b);
+  sh.scrollTop=st;
+}
+function saveAway(){
+  var p=awayDraft,a=parseYmd(p.from),b=parseYmd(p.to);
+  if(!a||!b||b<a){toast('Vérifie les dates');return;}
+  var list=state.ui.away=state.ui.away||[],o={id:p.id||('a'+Date.now()),type:p.type,label:p.label,from:p.from,to:p.to,mode:p.mode,move:p.move||'none',pool:!!p.pool,bike:!!p.bike},i,done=false;
+  for(i=0;i<list.length;i++)if(list[i].id===o.id){list[i]=o;done=true;}
+  if(!done)list.push(o);
+  applyAway();save();closeSheet();render(true);toast(o.label+' enregistré : plan adapté');
+}
+function delAway(){
+  if(!awayDraft||!awayDraft.id)return;
+  if(!confirm('Supprimer cette période et rétablir les séances d’origine ?'))return;
+  state.ui.away=awayList().filter(function(x){return x.id!==awayDraft.id;});
+  applyAway();save();closeSheet();render(true);toast('Plan rétabli');
+}
+function openAwayList(){
+  var list=awayList().slice().sort(function(x,y){return x.from<y.from?-1:1;}),b='';
+  if(!list.length)b+='<p class="muted">Aucune période pour l’instant. Pendant un week-end ou des vacances, le plan est allégé ou modifié selon ce que tu choisis.</p>';
+  list.forEach(function(p){
+    b+='<button class="srow" data-act="awayedit" data-id="'+esc(p.id)+'"><span class="sr-t"><b>'+esc(p.label)+' · '+AWAY_N[p.mode]+'</b><small>'+esc(fmtDay(parseYmd(p.from))+' → '+fmtDay(parseYmd(p.to)))+'</small></span><span class="sr-b">Modifier</span></button>';
+  });
+  b+='<button class="btn pri" data-act="awayopen" data-w="'+wv+'" style="margin-top:12px">Ajouter une période</button>';
+  showSheet('Vacances & week-ends','Alléger le plan pendant une absence',b);
+}
+function awayBanner(wk){
+  var a0=idxOfDate(wk.start),a1=a0+6,ps=awayList().filter(function(p){var f=parseYmd(p.from),t=parseYmd(p.to);return f&&t&&idxOfDate(f)<=a1&&idxOfDate(t)>=a0;});
+  if(!ps.length)return '';
+  return ps.map(function(p){return '<div class="banner" style="align-items:center">'+ic('info',20)+'<div style="flex:1"><b>'+esc(p.label)+' · '+AWAY_N[p.mode]+'</b><br>'+esc(fmtDay(parseYmd(p.from))+' → '+fmtDay(parseYmd(p.to)))+'</div><button class="chip" style="border:0" data-act="awayedit" data-id="'+esc(p.id)+'">Modifier</button></div>';}).join('');
+}
+function awayNote(s){
+  if(!s.adapt&&!s.moved)return '';
+  var pid=(s.adapt||s.moved).pid,lab=(s.adapt||s.moved).label,t='';
+  if(s.adapt&&s.orig)t+='<b>Séance adaptée · '+esc(lab)+' ('+AWAY_N[s.adapt.mode]+')</b>Séance d’origine : '+esc(s.orig.title)+(s.orig.sp!=='rest'?' · '+fh(s.orig.min):'')+'.<br>';
+  else t+='<b>Séance déplacée · '+esc(lab)+'</b>';
+  if(s.moved){var o=addDays(PLAN_START,s.moved.from);t+='Prévue à l’origine le '+DAYS[(o.getDay()+6)%7].toLowerCase()+' '+fmtDay(o)+'.<br>';}
+  return '<div class="goal adp-n">'+t+'<button class="chip" style="border:0;min-height:28px;margin-top:8px" data-act="awayedit" data-id="'+esc(pid)+'">Modifier la période</button></div>';
+}
 /* ---------- Distance estimée des séances vélo / course : durée de chaque bloc × vitesse cible ----------
    Vitesses : celles calculées depuis tes activités Garmin (autoProf) ; à défaut, repères par défaut (ou seuil saisi pour la course). */
 var DEF_RUN={soft:430,z2:390,tempo:330,im:375},DEF_BIKE={soft:23,z2:26,ft:28,sw:30,im:28};
@@ -1462,12 +1713,14 @@ function vWeek(){
   if(wv!==st.w)h+='<div style="text-align:center;margin:-4px 0 14px"><button class="chip hl" style="border:0;min-height:32px;padding:0 14px" data-act="wknow">Aller à la semaine en cours</button></div>';
   if(st.s==='before')h+='<div class="banner">'+ic('info',20)+'<div><b>Le programme n’a pas encore commencé.</b> Il démarre le '+fmtLong(PLAN_START).toLowerCase()+', dans '+st.days+' jour'+(st.days>1?'s':'')+'. Tu peux déjà consulter les semaines à venir.</div></div>';
   h+=weekStrip(wk);
+  h+=awayBanner(wk);
   h+='<section class="card theme"><div class="eyebrow">Thème de la semaine</div><div class="t">'+esc(wk.theme)+'</div><p>'+esc(wk.kind==='rec'?'Semaine de décharge : le volume baisse d’environ un tiers. Garde les séances faciles, dors plus, mange bien. C’est ici que tu absorbes la charge et que tu progresses.':wk.ph.tip)+'</p>'+
     '<div class="wprog"><div class="row"><b>'+ws.d+' / '+ws.n+' séances</b><span class="sp"></span><span class="small muted">'+fh(ws.dmin)+' / '+fh(ws.min)+(ws.m?' · '+km(ws.m)+' km nage':'')+'</span></div>'+bar(pct(ws.d,ws.n))+'</div></section>';
   wk.days.forEach(function(day,di){
     var isToday=diffDays(day.date,t)===0,real=day.sessions.filter(function(s){return s.sp!=='rest';}),dn=real.filter(function(s){return isDone(s);}).length;
     h+='<div class="day" id="day-'+di+'"><h3>'+day.name+'</h3><small>'+fmtDay(day.date)+'</small>'+(isToday?'<span class="chip hl">Aujourd’hui</span>':'')+'<span class="sp"></span>'+(real.length?'<small>'+dn+' / '+real.length+'</small>':'')+'</div>';
     day.sessions.forEach(function(s){h+=sessCard(s,isToday);});
+    if(!day.sessions.length)h+='<p class="small muted" style="margin:0 2px 8px">Jour libre : les séances prévues ont été déplacées.</p>';
   });
   h+='<details class="fold" style="margin-top:22px"><summary>'+ic('info',20)+'<span>Repères d’effort<small>Échelle d’effort, FTP, FC max, CSS</small></span></summary><div class="fbody legendrpe"><b>Effort</b> = ressenti sur 10.<br><b>3–4</b> facile, tu peux parler · <b>5–6</b> allure Ironman, régulière et contrôlée · <b>7</b> soutenu, phrases courtes · <b>8+</b> très dur.<br><b>FTP</b> = puissance moyenne maximale tenable 1 h à vélo · <b>FC max</b> = fréquence cardiaque maximale · <b>CSS</b> = vitesse critique de nage (allure tenable ≈ 1 500 m).<br>'+(autoProf()?'<b>Zones, allures et vitesses : calculées automatiquement</b> à partir de tes activités Garmin (FC réelle, allures réelles) et de ton estimation de course (allure Ironman). Les repères saisis dans les réglages restent prioritaires.<br>':'')+(hasProf()||autoProf()?'':'<button class="chip hl" style="border:0;min-height:32px;padding:0 14px;margin:8px 0" data-act="settings">Renseigner mes repères (watts, bpm, allures)</button><br>')+'Un jour sans forme ? Remplace la séance par du facile : la régularité prime sur l’intensité.</div></details>';
   return h;
@@ -1478,11 +1731,13 @@ function sessCard(s,isToday){
   if(s.sp==='race')mc='<span class="mc dur">'+esc(s.sum)+'</span>';
   else if(s.sp==='rest')mc='<span class="mc">Récupération</span>';
   else mc='<span class="mc dur">'+fh(s.min)+'</span>'+kmChips(s)+'<span class="mc">'+esc(s.tag)+'</span>';
+  if(s.adapt)mc+='<span class="mc adp">Adapté</span>';
+  if(s.moved)mc+='<span class="mc adp">Déplacé</span>';
   var h='<div class="sess sp-'+s.sp+(ok?' done':'')+(isOpen?' open':'')+'" data-sid="'+s.id+'"><div class="s-row">'+
     '<button class="s-main" data-act="open" data-id="'+s.id+'" aria-expanded="'+isOpen+'"><span class="s-ic">'+ic(s.sp,24)+'</span><span class="s-txt">'+(over?'<span class="s-ov">'+esc(over)+'</span>':'')+'<span class="s-t">'+esc(ttl)+'</span><span class="s-m">'+mc+'</span>'+
       (s.sum&&s.sp!=='race'&&s.sp!=='rest'?'<span class="s-sum">'+esc(s.sum)+'</span>':'')+(a?'<span class="s-sum"><b class="sv">Garmin</b> '+esc(actLine(a)+actWhen(a,s))+'</span>':'')+'</span><span class="s-chev">'+ic('down',20)+'</span></button>'+
     '<button class="chk" role="checkbox" aria-checked="'+ok+'" aria-label="'+(s.sp==='race'?'Course terminée':s.sp==='rest'?'Repos respecté':'Séance réalisée')+' : '+esc(s.title)+'" data-act="toggle" data-id="'+s.id+'"><i>'+ic('check',18)+'</i></button></div>'+
-    '<div class="s-det">'+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+detailBody(s)+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+garminBlock(s)+'</div></div>';
+    '<div class="s-det">'+awayNote(s)+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+detailBody(s)+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+garminBlock(s)+'</div></div>';
   if(s.sp==='rest')h=h.replace(/<button class="chk".*?<\/button>/,'');
   return h;
 }
@@ -1649,13 +1904,32 @@ document.addEventListener('click',function(e){
   else if(a==='dflt'){
     var f=state.ui.dflt=state.ui.dflt||{m:'26w'};
     if(d.v==='custom'&&!f.from){var rr=dRange(dataActs());f.from=isoDate(rr.from);f.to=isoDate(rr.to);}
-    f.m=d.v;dsel=null;save();render(true);
+    f.m=d.v;dsel=null;dcalPend=false;dcalM=null;save();render(true);
   }
   else if(a==='dmetric'){state.ui.dmetric=d.v==='dist'?'dist':'time';save();render(true);}
   else if(a==='dchart'){
     var wl=(el.parentNode.getAttribute('data-wks')||'').split(',').map(Number),cr=el.getBoundingClientRect(),cx=(e.clientX-cr.left)/cr.width*340,ci=Math.floor((cx-30)/((340-30-4)/wl.length));
     dsel=wl[Math.max(0,Math.min(wl.length-1,ci))];render(true);
   }
+  else if(a==='awayopen'){awayDraft=awayCalInit(newAwayDraft(+d.w||wv,'weekend'));renderAway();}
+  else if(a==='awayedit'){var ap=awayList().filter(function(x){return x.id===d.id;})[0];if(ap){awayDraft=awayCalInit(Object.assign({},ap));renderAway();}}
+  else if(a==='awaylist')openAwayList();
+  else if(a==='awaytype'&&awayDraft){awayDraft.type=d.v;awayDraft.label=d.v==='vacances'?'Vacances':'Week-end';if(!awayDraft.touched&&!awayDraft.id){var nd=newAwayDraft(Math.max(1,Math.min(NW,Math.floor(idxOfDate(parseYmd(awayDraft.from))/7)+1)),d.v);awayDraft.from=nd.from;awayDraft.to=nd.to;awayDraft.mode=nd.mode;awayDraft.move=nd.move;awayCalInit(awayDraft);}renderAway();}
+  else if(a==='calpreset'&&awayDraft){awayPreset(awayDraft,d.v);renderAway();}
+  else if(a==='calnav'){
+    var dir=+d.v;
+    if(d.ns==='away'&&awayDraft){var nm=new Date(awayDraft.cal.y,awayDraft.cal.m+dir,1);awayDraft.cal={y:nm.getFullYear(),m:nm.getMonth()};renderAway();}
+    else if(d.ns==='data'){var rg=dRange(dataActs()),bs=dcalM||{y:rg.to.getFullYear(),m:rg.to.getMonth()},nd2=new Date(bs.y,bs.m+dir,1);dcalM={y:nd2.getFullYear(),m:nd2.getMonth()};render(true);}
+  }
+  else if(a==='calday'){
+    if(d.ns==='away'&&awayDraft){var r1=calPick(awayDraft.from,awayDraft.to,awayDraft.pending,d.d);awayDraft.from=r1.from;awayDraft.to=r1.to;awayDraft.pending=r1.pending;awayDraft.touched=true;renderAway();}
+    else if(d.ns==='data'){var f2=state.ui.dflt=state.ui.dflt||{m:'custom'},r2=calPick(f2.from||d.d,f2.to||d.d,dcalPend,d.d);f2.from=r2.from;f2.to=r2.to;f2.m='custom';dcalPend=r2.pending;dsel=null;save();render(true);}
+  }
+  else if(a==='awaymode'&&awayDraft){awayDraft.mode=d.v;awayDraft.touched=true;renderAway();}
+  else if(a==='awaymove'&&awayDraft){awayDraft.move=d.v;awayDraft.touched=true;renderAway();}
+  else if(a==='awayeq'&&awayDraft){awayDraft[d.v]=!awayDraft[d.v];awayDraft.touched=true;renderAway();}
+  else if(a==='awaysave'&&awayDraft)saveAway();
+  else if(a==='awaydel')delAway();
   else if(a==='svresync')svResync();
   else if(a==='settings')openSheet();
   else if(a==='welcome')openWelcome();
@@ -1674,6 +1948,7 @@ document.addEventListener('change',function(e){
     else{var nv=parseFloat(v.replace(',','.'));if(isFinite(nv)&&nv>=0)rp[k]=nv;else delete rp[k];}
     save();render(true);return;
   }
+  if(t&&(t.id==='away-from'||t.id==='away-to')&&awayDraft){awayDraft[t.id==='away-from'?'from':'to']=t.value;awayDraft.touched=true;if(awayDraft.to<awayDraft.from)awayDraft.to=awayDraft.from;renderAway();return;}
   if(t&&(t.id==='dfrom'||t.id==='dto')){
     var f=state.ui.dflt=state.ui.dflt||{m:'custom'};
     f[t.id==='dfrom'?'from':'to']=t.value;f.m='custom';dsel=null;save();render(true);
@@ -1737,6 +2012,7 @@ function openSheet(){
       '<label class="inp"><span>FC max<small>bpm</small></span><input id="pf-fc" inputmode="numeric" placeholder="ex. 185" value="'+esc(pv('fc'))+'"></label>'+
       '<label class="inp"><span>Allure seuil course<small>min:s par km (≈ 10 km)</small></span><input id="pf-thr" placeholder="ex. 4:50" value="'+esc(pv('thr'))+'"></label>'+
       '<label class="inp"><span>CSS natation<small>min:s par 100 m</small></span><input id="pf-css" placeholder="ex. 1:50" value="'+esc(pv('css'))+'"></label>')+
+    foldHtml('away','week','Vacances & week-ends',awayList().length?awayList().length+' période'+(awayList().length>1?'s':''):'Alléger ou déplacer les séances pendant une absence','<p>Pendant un week-end ou des vacances, le plan est allégé, adapté au matériel disponible ou déplacé sur d’autres jours.</p><button class="btn pri" data-act="awaylist">Gérer les périodes</button>')+
     foldHtml('backup','notes','Sauvegarde','Exporter ou restaurer tes données',
       '<p>Tout est enregistré automatiquement sur cet appareil. Exporte une copie de sécurité de temps en temps (changement de téléphone, nettoyage de Safari…).</p>'+
       '<div class="btns"><button class="btn pri" data-act="export">Exporter</button><button class="btn" data-act="import">Importer</button></div>'+
@@ -1759,7 +2035,7 @@ function openWelcome(){
   sh.scrollTop=0;document.getElementById('sheetbg').classList.add('on');
 }
 function closeSheet(){document.getElementById('sheetbg').classList.remove('on');}
-function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,notes:state.notes,links:state.links,prof:state.ui.prof||{}});}
+function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,notes:state.notes,links:state.links,prof:state.ui.prof||{},away:state.ui.away||[]});}
 function doExport(){
   var txt=payload(),ta=document.getElementById('io');ta.value=txt;
   if(navigator.share){navigator.share({title:'Sauvegarde Ironman 2027',text:txt}).catch(function(){});return;}
@@ -1771,11 +2047,11 @@ function doImport(){
   try{o=JSON.parse(ta.value);if(!o||o.app!=='ironman-sables-2027'||typeof o.done!=='object'||typeof o.notes!=='object')throw 0;}
   catch(e){toast('Sauvegarde invalide');return;}
   if(!confirm('Remplacer les données actuelles par cette sauvegarde ?'))return;
-  state.done=o.done||{};state.notes=o.notes||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;save();closeSheet();render(false);toast('Sauvegarde restaurée');
+  state.done=o.done||{};state.notes=o.notes||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.away){state.ui.away=o.away;applyAway();}save();closeSheet();render(false);toast('Sauvegarde restaurée');
 }
 function doReset(){
   if(!confirm('Effacer toutes les séances cochées et toutes les notes ? Cette action est définitive.'))return;
-  state.done={};state.notes={};state.links={};save();closeSheet();render(false);toast('Données réinitialisées');
+  state.done={};state.notes={};state.links={};state.ui.away=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
 }
 
 /* ---------- Estimation du temps de course (IRONMAN full distance) ----------
@@ -2135,7 +2411,7 @@ function dRange(acts){
 function dFilterBar(R,n){
   var f=state.ui.dflt||{m:'26w'},chips=[['4w','4 sem.'],['12w','12 sem.'],['26w','6 mois'],['ytd','Année'],['all','Tout'],['custom','Période…']];
   var h='<div class="eyebrow" style="margin:6px 0 8px">Période d’analyse</div><div class="rng" style="flex-wrap:wrap" role="group" aria-label="Période">'+chips.map(function(c){return '<button data-act="dflt" data-v="'+c[0]+'" aria-pressed="'+(f.m===c[0])+'">'+c[1]+'</button>';}).join('')+'</div>';
-  if(f.m==='custom')h+='<div class="dates"><label>Du<input type="date" id="dfrom" value="'+isoDate(R.from)+'" max="'+isoDate(today())+'"></label><label>Au<input type="date" id="dto" value="'+isoDate(R.to)+'" max="'+isoDate(today())+'"></label></div>';
+  if(f.m==='custom'){var cm=dcalM||{y:R.to.getFullYear(),m:R.to.getMonth()};h+='<div style="margin-top:10px">'+calHtml('data',isoDate(R.from),isoDate(R.to),new Date(2025,0,1),today(),cm.y,cm.m)+(dcalPend?'<div class="cal-hint" style="margin:8px 0 0">Touche le dernier jour de la période</div>':'')+'</div>';}
   return h+'<div class="small muted" style="margin:8px 0 14px">'+fmtDay(R.from)+' '+R.from.getFullYear()+' → '+fmtDay(R.to)+' '+R.to.getFullYear()+' · '+n+' activité'+(n>1?'s':'')+'</div>';
 }
 function vData(){
@@ -2456,7 +2732,8 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={estKm:estKm,detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={applyAway:applyAway,adaptFields:adaptFields,estKm:estKm,detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+applyAway();
 render(false);
 if(state.ui.welcomed===undefined){
   if(state.sv.url||Object.keys(state.done).length)state.ui.welcomed=true;
