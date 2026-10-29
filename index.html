@@ -190,6 +190,20 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .cf{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px;background:rgba(255,255,255,.12);color:var(--t1)}
 .warn{display:flex;gap:10px;background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.4);border-radius:14px;padding:10px 12px;font-size:13px;color:#ecd9a8;margin:0 0 14px}
 .warn svg{color:var(--warn);flex:none;margin-top:1px}
+.sec-t{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--t2);font-weight:650;margin:16px 0 4px}
+.sub-t{font-size:13px;font-weight:700;color:var(--t1);margin:12px 0 2px}
+.st{display:flex;gap:12px;padding:10px 0;border-bottom:.5px solid var(--sep)}
+.st:last-child{border-bottom:0}
+.st .du{flex:none;width:62px;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;line-height:1.3}
+.st .bd{flex:1;min-width:0}
+.st .nm{font-weight:650;font-size:14.5px;line-height:1.3}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cp{font-size:12px;font-weight:650;padding:3px 9px;border-radius:8px;background:rgba(255,255,255,.08);color:var(--t1);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cp.pc{background:var(--cb);color:var(--c)}
+.cp.rpe{background:none;border:1px solid rgba(255,255,255,.18);color:var(--t2);font-weight:600}
+.rep{margin:6px 0;padding:2px 0 2px 12px;border-left:3px solid var(--c);border-radius:2px}
+.rep .rh{font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--c);text-transform:uppercase;margin-top:4px}
+.rep .st:last-child{border-bottom:0}
 .tip{margin-top:10px;font-size:13.5px;color:var(--t2);background:rgba(255,255,255,.05);border-radius:12px;padding:9px 12px}
 .legendrpe{font-size:13px;color:var(--t2);line-height:1.5}
 .legendrpe b{color:var(--t1);font-weight:600}
@@ -939,6 +953,64 @@ function autoSummary(){
    tirées de tes données (autoProf). Intervals.icu transmet ensuite la semaine à venir à Garmin Connect. */
 // Intervals.icu n'exporte vers Garmin que les cibles de FC (zones) : l'allure / la vitesse est donc écrite dans le NOM de l'étape
 // (ex. « 6'40-7'05/km »), affiché sur la montre, et la cible réelle de l'étape est une zone de FC.
+/* ---------- Détail d'une séance : déroulé par blocs (durée, nom, pastilles de cibles) + conseils ---------- */
+var TOKN={R:{soft:'Facile',z2:'Endurance',tempo:'Tempo',im:'Allure Ironman'},B:{soft:'Facile',z2:'Endurance',ft:'Force-endurance',sw:'Sweet spot',im:'Allure Ironman'},S:{easy:'Souple',end:'Aisé',im:'Allure Ironman',css:'Seuil',fast:'Rapide'}};
+function durTxt(n,u){return u==='m'?(n<60?n+' min':fm(n)):u==='s'?n+' s':u==='mtr'?n+' m':n+' km';}
+function wkBlocks(wk){
+  var rows=[],sec='main',grp=null;
+  var close=function(){if(grp){rows.push({k:'rep',n:grp.n,steps:grp.steps});grp=null;}};
+  wk.split('\n').forEach(function(l){
+    var t=l.trim(),m;
+    if(!t){close();return;}
+    if((m=/^(\d+)x$/.exec(t))){close();grp={n:+m[1],steps:[]};return;}
+    if(t.charAt(0)!=='-'){close();if(/^warmup$/i.test(t))sec='warm';else if(/^cooldown$/i.test(t))sec='cool';else{sec='main';if(!/^main$/i.test(t))rows.push({k:'head',text:t});}return;}
+    m=/^-\s+(\d+)(m|s|mtr|km)(?:\s+(rest|\{([RBS]):(\w+)\}))?$/.exec(t);
+    if(!m)return;
+    var st={sec:sec,dur:durTxt(+m[1],m[2]),rest:m[3]==='rest',t:m[4],key:m[5]};
+    if(grp)grp.steps.push(st);
+    else{
+      var prev=rows[rows.length-1],f=prev&&prev.k==='rep'&&prev.steps[0];
+      if(f&&f.dur===st.dur&&f.t===st.t&&f.key===st.key)prev.n++;      // « (n-1) × [effort + récup] » puis un dernier effort = « n × »
+      else rows.push({k:'step',st:st});
+    }
+  });
+  close();
+  return rows;
+}
+function chipsFor(t,k){
+  var raw=tx('{'+t.toLowerCase()+':'+k+'}'),out=[];
+  if(raw.charAt(0)!=='(')return out;
+  raw.slice(1,-1).split(' · ').forEach(function(p){
+    out.push({c:/bpm/.test(p)?'hr':/\/km|\/100|km\/h/.test(p)?'pc':'rpe',t:p.replace(/^≈ /,'')});
+  });
+  if(t==='B'){var lb=wkLab('B',k);if(/km\/h$/.test(lb)){out=out.filter(function(c){return !/km\/h/.test(c.t);});out.push({c:'pc',t:lb.replace('-','–').replace('km/h',' km/h')});}}
+  var ord={pc:0,hr:1,rpe:2};
+  return out.sort(function(a,b){return ord[a.c]-ord[b.c];});
+}
+function stepRow(st,name){
+  var base=(TOKN[st.t]||{})[st.key]||'';
+  var nm=name||(st.rest?'Repos':st.sec==='warm'?'Échauffement'+(base?' · '+base.toLowerCase():''):st.sec==='cool'?'Retour au calme'+(base?' · '+base.toLowerCase():''):base||'Bloc');
+  var chips=st.rest?[]:chipsFor(st.t,st.key);
+  return '<div class="st"><span class="du">'+esc(st.dur)+'</span><div class="bd"><div class="nm">'+esc(nm)+'</div>'+(chips.length?'<div class="chips">'+chips.map(function(c){return '<span class="cp '+c.c+'">'+esc(c.t)+'</span>';}).join('')+'</div>':'')+'</div></div>';
+}
+function stepsHtml(s){
+  var out='';
+  wkBlocks(s.wk).forEach(function(r){
+    if(r.k==='head')out+='<div class="sub-t">'+esc(r.text)+'</div>';
+    else if(r.k==='step')out+=stepRow(r.st);
+    else out+='<div class="rep"><div class="rh">'+r.n+' ×</div>'+r.steps.map(function(st,i){return stepRow(st,i>0&&!st.rest?'Récupération':null);}).join('')+'</div>';
+  });
+  return out;
+}
+var TIP_SKIP=/^(Échauffement|Corps de séance|Retour au calme|Série \d|Complète en|Durée totale|Toute la sortie|Reste de la sortie|Footing en|Footing très|Endurance|Puis |Dernières 5|Fin de sortie|Entre et après|\d+ (×|min))/i;
+function liHtml(l){var t=tx(l),m=/^([^:]{3,44}) : (.+)$/.exec(t);return '<li>'+(m?'<b>'+esc(m[1])+'</b> : '+esc(m[2]):esc(t))+'</li>';}
+function detailBody(s){
+  var h='',blocks=s.wk?stepsHtml(s):'';
+  if(blocks)h+='<div class="sec-t">Déroulé</div>'+blocks;
+  var tl=blocks?s.lines.filter(function(l){return !TIP_SKIP.test(l);}):s.lines;
+  if(tl.length)h+='<div class="sec-t">'+(blocks?'Conseils':'Détail de la séance')+'</div><ul>'+tl.map(liHtml).join('')+'</ul>';
+  return h;
+}
 function pq(s){return mmss(s).replace(':',"'");}
 function swimRange(k){
   var ap=autoProf(),p=state.ui.prof||{},im=ap&&ap.imSwim;if(!im)return null;
@@ -1163,7 +1235,7 @@ function sessCard(s,isToday){
   var h='<div class="sess sp-'+s.sp+(ok?' done':'')+(isOpen?' open':'')+'" data-sid="'+s.id+'"><div class="s-row">'+
     '<button class="s-main" data-act="open" data-id="'+s.id+'" aria-expanded="'+isOpen+'"><span class="s-ic">'+ic(s.sp,24)+'</span><span class="s-txt"><span class="s-t">'+esc(s.title)+'</span><span class="s-m">'+esc(meta.join(' · '))+(s.sum&&s.sp!=='race'&&s.sp!=='rest'?'<br>'+esc(s.sum):'')+(a?'<br><b class="sv">Garmin</b> '+esc(actLine(a)+actWhen(a,s)):'')+'</span></span><span class="s-chev">'+ic('down',20)+'</span></button>'+
     '<button class="chk" role="checkbox" aria-checked="'+ok+'" aria-label="'+(s.sp==='race'?'Course terminée':s.sp==='rest'?'Repos respecté':'Séance réalisée')+' : '+esc(s.title)+'" data-act="toggle" data-id="'+s.id+'"><i>'+ic('check',18)+'</i></button></div>'+
-    '<div class="s-det">'+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+'<ul>'+s.lines.map(function(l){return '<li>'+esc(tx(l))+'</li>';}).join('')+'</ul>'+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+garminBlock(s)+'</div></div>';
+    '<div class="s-det">'+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+detailBody(s)+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+garminBlock(s)+'</div></div>';
   if(s.sp==='rest')h=h.replace(/<button class="chk".*?<\/button>/,'');
   return h;
 }
@@ -2037,7 +2109,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
 render(false);
 (function(){
   syncActs(true);
