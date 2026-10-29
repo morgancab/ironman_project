@@ -1,8 +1,8 @@
-// Service worker de l'app Ironman Sables 2027.
+// Service worker de l'app Plan triathlon.
 // Stratégie « stale-while-revalidate » : l'app s'ouvre instantanément depuis le cache
 // (donc aussi sans réseau) et se met à jour en arrière-plan quand une connexion est disponible.
-var CACHE = 'ironman-sables-2027-v1';
-var CORE = ['./', './index.html'];
+var CACHE = 'plan-triathlon-v3';   // à changer à chaque version importante : les anciens caches sont supprimés à l'activation
+var CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(

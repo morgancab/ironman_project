@@ -36,7 +36,10 @@ async function route(req, env) {
     if (req.method === 'OPTIONS') return cors(env, new Response(null, { status: 204 }));
     try {
       if (url.pathname.startsWith('/api/')) {
-        if (!authorized(req, env)) return cors(env, json({ error: 'unauthorized' }, 401));
+        if (url.pathname === '/api/admin/stats' && req.method === 'GET') return authorized(req, env) ? adminStats(url, env) : json({ error: 'unauthorized' }, 401);
+        const cr = credentials(req, env);
+        if (!cr) return cors(env, json({ error: 'unauthorized' }, 401));
+        env = cr;
         if (url.pathname === '/api/activities' && req.method === 'GET') return cors(env, await apiActivities(url, env));
         if (url.pathname === '/api/status' && req.method === 'GET') return cors(env, await apiStatus(env));
         if (url.pathname === '/api/sync' && req.method === 'POST') return cors(env, await apiSync(env));
@@ -48,11 +51,248 @@ async function route(req, env) {
         if (url.pathname === '/api/debug' && req.method === 'GET') return cors(env, await apiDebug(env));
         return cors(env, json({ error: 'not_found' }, 404));
       }
+      if (url.pathname === '/pub/races' && req.method === 'GET') return pubRaces(url, env);
+      if (url.pathname === '/pub/ev' && req.method === 'POST') return pubEvent(req, env);
+      if (url.pathname.startsWith('/pub/sync/')) return pubSync(req, url, env);
+      if (url.pathname === '/pub/config' && req.method === 'GET') return json({ googleClientId: env.GOOGLE_CLIENT_ID && env.SESSION_SECRET && env.DB ? env.GOOGLE_CLIENT_ID : '' });   // pas annoncée tant que le secret de session ou la base manquent : l'app ne se verrouille pas par erreur
+      if (url.pathname === '/pub/auth/google' && req.method === 'POST') return authGoogle(req, env);
+      if (url.pathname.startsWith('/pub/account')) return accountRoutes(req, url, env);
       return new Response('Ironman Garmin worker : OK', { status: 200 });
     } catch (e) {
       return json({ error: String((e && e.message) || e) }, 500);
     }
   }
+}
+
+/* ---------- Recherche de courses (publique, sans compte) : épreuves de la fédération internationale (World Triathlon) ----------
+   Route : GET /pub/races?q=<texte>&from=<AAAA-MM-JJ>   Secret : WT_API_KEY (clé gratuite : https://apps-api.triathlon.org/register)
+   La clé reste ici : le navigateur ne la voit jamais. Réponses mises en cache 6 h (1 h si aucun résultat) : même recherche = pas de nouvel appel.
+   On utilise /events?name= (liste filtrée par date) : l'endpoint /search/events ne renvoie aucune épreuve à venir.
+   Sans clé, ou si l'API est indisponible, on répond {ok:false} et l'app retombe sur son catalogue intégré. */
+async function pubRaces(url, env) {
+  const q = (url.searchParams.get('q') || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  const fromRaw = url.searchParams.get('from') || '';
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(fromRaw) ? fromRaw : ymd(new Date());
+  if (q.length < 3) return json({ ok: true, events: [] });
+  if (!env.WT_API_KEY) return json({ ok: false, reason: 'no-key', events: [] });
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  const ck = new Request('https://cache.local/pub-races2?q=' + encodeURIComponent(q.toLowerCase()) + '&from=' + from);
+  if (cache) {
+    const hit = await cache.match(ck);
+    if (hit) return hit;
+  }
+  let r;
+  try {
+    r = await fetch('https://api.triathlon.org/v1/events?' + new URLSearchParams({ name: q, start_date: from, per_page: '10', order: 'asc' }), {
+      headers: { apikey: env.WT_API_KEY, Accept: 'application/json', 'User-Agent': 'triathlon-plan-app' },
+    });
+  } catch (e) {
+    return json({ ok: false, reason: 'unreachable', events: [] });
+  }
+  if (!r.ok) return json({ ok: false, reason: 'upstream-' + r.status, events: [] });
+  let j;
+  try {
+    j = await r.json();
+  } catch (e) {
+    return json({ ok: false, reason: 'bad-json', events: [] });
+  }
+  const events = (Array.isArray(j.data) ? j.data : [])
+    .map((e) => ({
+      id: e.event_id,
+      title: e.event_title || e.title || '',
+      venue: e.event_venue || '',
+      country: e.event_country || '',
+      cc: e.event_country_isoa2 || '',
+      date: String(e.event_date || '').slice(0, 10),
+      end: String(e.event_finish_date || '').slice(0, 10),
+      specs: (e.event_specifications || []).map((s) => s.cat_name).filter(Boolean),
+    }))
+    .filter((e) => e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.date >= from)
+    .slice(0, 10);
+  const res = new Response(JSON.stringify({ ok: true, events }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=' + (events.length ? 21600 : 3600) } });
+  if (cache) await cache.put(ck, res.clone());
+  return res;
+}
+
+/* ---------- Comptes : connexion Google ----------
+   Le navigateur obtient un jeton d'identité (JWT RS256) auprès de Google ; ici on vérifie sa signature avec les clés publiques de Google,
+   l'émetteur, l'audience (GOOGLE_CLIENT_ID) et l'expiration, puis on crée / met à jour l'utilisateur et on délivre un jeton de session signé
+   (HMAC-SHA256 avec le secret SESSION_SECRET, valable 90 jours). Données conservées : identifiant Google (sub), e-mail, nom, dates de connexion,
+   et le plan de l'utilisateur (JSON). Routes (en-tête X-Session) : GET /pub/account · GET|PUT /pub/account/data · GET /pub/account/export · DELETE /pub/account */
+const enc = new TextEncoder(), dec = new TextDecoder();
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (t) => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (t.length % 4)) % 4)), (c) => c.charCodeAt(0));
+const SESSION_DAYS = 90;
+async function googleKeys() {
+  const ck = new Request('https://cache.local/google-jwks');
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (cache) { const hit = await cache.match(ck); if (hit) return hit.json(); }
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+  if (!r.ok) throw new Error('clés Google indisponibles');
+  const text = await r.text();
+  if (cache) await cache.put(ck, new Response(text, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' } }));
+  return JSON.parse(text);
+}
+async function verifyGoogle(env, credential) {
+  const parts = String(credential || '').split('.');
+  if (parts.length !== 3) throw new Error('jeton invalide');
+  const header = JSON.parse(dec.decode(unb64u(parts[0]))), p = JSON.parse(dec.decode(unb64u(parts[1])));
+  if (header.alg !== 'RS256') throw new Error('algorithme refusé');
+  const jwk = ((await googleKeys()).keys || []).find((k) => k.kid === header.kid);
+  if (!jwk) throw new Error('clé inconnue');
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, unb64u(parts[2]), enc.encode(parts[0] + '.' + parts[1]));
+  if (!ok) throw new Error('signature invalide');
+  if (p.iss !== 'accounts.google.com' && p.iss !== 'https://accounts.google.com') throw new Error('émetteur invalide');
+  if (!env.GOOGLE_CLIENT_ID || p.aud !== env.GOOGLE_CLIENT_ID) throw new Error('audience invalide');
+  if (!p.exp || p.exp * 1000 < Date.now()) throw new Error('jeton expiré');
+  if (!p.sub || !p.email || p.email_verified === false) throw new Error('e-mail non vérifié');
+  return { sub: String(p.sub), email: String(p.email).slice(0, 200), name: String(p.name || '').slice(0, 100) };
+}
+async function hmacKey(env) {
+  if (!env.SESSION_SECRET) throw new Error('SESSION_SECRET manquant');
+  return crypto.subtle.importKey('raw', enc.encode(env.SESSION_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+async function makeSession(env, sub) {
+  const body = b64u(enc.encode(JSON.stringify({ sub, exp: Date.now() + SESSION_DAYS * 86400000 })));
+  const sig = await crypto.subtle.sign('HMAC', await hmacKey(env), enc.encode(body));
+  return body + '.' + b64u(sig);
+}
+async function readSession(req, env) {
+  const t = (req.headers.get('X-Session') || '').split('.');
+  if (t.length !== 2 || !env.SESSION_SECRET) return null;
+  try {
+    const ok = await crypto.subtle.verify('HMAC', await hmacKey(env), unb64u(t[1]), enc.encode(t[0]));
+    if (!ok) return null;
+    const p = JSON.parse(dec.decode(unb64u(t[0])));
+    return p && p.sub && p.exp > Date.now() ? p.sub : null;
+  } catch (e) { return null; }
+}
+async function authGoogle(req, env) {
+  if (!env.DB || !env.GOOGLE_CLIENT_ID || !env.SESSION_SECRET) return json({ ok: false, error: 'connexion non configurée' }, 501);
+  let b = null;
+  try { b = await req.json(); } catch (e) { return json({ ok: false, error: 'corps invalide' }, 400); }
+  let u;
+  try { u = await verifyGoogle(env, b && b.credential); } catch (e) { return json({ ok: false, error: String((e && e.message) || e) }, 401); }
+  const now = Date.now();
+  await env.DB.prepare('INSERT INTO users (id, email, name, created, last_login, v) VALUES (?, ?, ?, ?, ?, 0) ON CONFLICT(id) DO UPDATE SET email = excluded.email, name = excluded.name, last_login = excluded.last_login').bind(u.sub, u.email, u.name, now, now).run();
+  return json({ ok: true, token: await makeSession(env, u.sub), user: { email: u.email, name: u.name } });
+}
+async function accountRoutes(req, url, env) {
+  if (!env.DB) return json({ ok: false, error: 'indisponible' }, 501);
+  const sub = await readSession(req, env);
+  if (!sub) return json({ ok: false, error: 'non connecté' }, 401);
+  const path = url.pathname.slice('/pub/account'.length);
+  if (path === '' && req.method === 'GET') {
+    const u = await env.DB.prepare('SELECT email, name, created, last_login, v, data_updated FROM users WHERE id = ?').bind(sub).first();
+    return u ? json({ ok: true, user: { email: u.email, name: u.name, created: u.created }, v: u.v, updated: u.data_updated || 0 }) : json({ ok: false, error: 'compte introuvable' }, 404);
+  }
+  if (path === '' && req.method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(sub).run();
+    return json({ ok: true });
+  }
+  if (path === '/export' && req.method === 'GET') {
+    const u = await env.DB.prepare('SELECT email, name, created, last_login, v, data, data_updated FROM users WHERE id = ?').bind(sub).first();
+    if (!u) return json({ ok: false, error: 'compte introuvable' }, 404);
+    let data = null;
+    try { data = u.data ? JSON.parse(u.data) : null; } catch (e) { data = null; }
+    return json({ ok: true, export: { email: u.email, name: u.name, created: new Date(u.created).toISOString(), last_login: new Date(u.last_login).toISOString(), plan_data: data } });
+  }
+  if (path === '/data') {
+    const u = await env.DB.prepare('SELECT data, v, data_updated FROM users WHERE id = ?').bind(sub).first();
+    if (!u) return json({ ok: false, error: 'compte introuvable' }, 404);
+    if (req.method === 'GET') {
+      if (url.searchParams.get('meta') === '1') return json({ ok: true, v: u.v, updated: u.data_updated || 0 });
+      let data = null;
+      try { data = u.data ? JSON.parse(u.data) : null; } catch (e) { data = null; }
+      return json({ ok: true, v: u.v, updated: u.data_updated || 0, data });
+    }
+    if (req.method === 'PUT') {
+      let b = null;
+      try { b = await req.json(); } catch (e) { return json({ ok: false, error: 'corps invalide' }, 400); }
+      const text = JSON.stringify((b && b.data) || null);
+      if (!b || !b.data || typeof b.data !== 'object' || text.length > SYNC_MAX) return json({ ok: false, error: 'données invalides ou trop grosses' }, 413);
+      if (Number(b.base) !== u.v) return json({ ok: false, error: 'conflit', v: u.v, updated: u.data_updated || 0 }, 409);
+      const now = Date.now();
+      await env.DB.prepare('UPDATE users SET data = ?, v = v + 1, data_updated = ? WHERE id = ?').bind(text, now, sub).run();
+      return json({ ok: true, v: u.v + 1, updated: now });
+    }
+  }
+  return json({ error: 'not_found' }, 404);
+}
+
+/* ---------- Sauvegarde cloud chiffrée, sans compte ----------
+   L'utilisateur possède un « code de récupération » (généré dans l'app, jamais envoyé). L'app en déduit :
+     id  = SHA-256("id:"+code)  : adresse de la sauvegarde ;  wk = SHA-256("w:"+code) : preuve d'écriture ;  clé AES-GCM = SHA-256("enc:"+code).
+   Le serveur ne reçoit que id, wk et un blob CHIFFRÉ : il ne peut pas lire les données (ni savoir qui est l'utilisateur).
+   Il garde sha256(wk) comme vérificateur : lecture = connaître l'id, écriture / suppression = connaître wk.
+   Versionnage optimiste : PUT {blob, base} refusé (409) si base != version actuelle, pour ne jamais écraser une autre version sans le savoir.
+   Routes : GET /pub/sync/<id>[?meta=1]   PUT /pub/sync/<id> (X-Sync-Write)   DELETE /pub/sync/<id> (X-Sync-Write) */
+const SYNC_MAX = 300000;
+async function sha256hex(t) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function pubSync(req, url, env) {
+  if (!env.DB) return json({ ok: false, error: 'indisponible' }, 501);
+  const id = url.pathname.slice('/pub/sync/'.length);
+  if (!/^[0-9a-f]{64}$/.test(id)) return json({ ok: false, error: 'id invalide' }, 400);
+  const row = await env.DB.prepare('SELECT verifier, blob, v, updated FROM sync WHERE id = ?').bind(id).first();
+  if (req.method === 'GET') {
+    if (!row) return json({ ok: false, error: 'introuvable' }, 404);
+    return json(url.searchParams.get('meta') === '1' ? { ok: true, v: row.v, updated: row.updated } : { ok: true, v: row.v, updated: row.updated, blob: row.blob });
+  }
+  const wk = (req.headers.get('X-Sync-Write') || '').trim();
+  if (!/^[0-9a-f]{64}$/.test(wk)) return json({ ok: false, error: 'preuve d’écriture manquante' }, 401);
+  const ver = await sha256hex(wk);
+  if (row && row.verifier !== ver) return json({ ok: false, error: 'refusé' }, 403);
+  if (req.method === 'DELETE') {
+    if (row) await env.DB.prepare('DELETE FROM sync WHERE id = ?').bind(id).run();
+    return json({ ok: true });
+  }
+  if (req.method !== 'PUT') return json({ error: 'not_found' }, 404);
+  let b = null;
+  try { b = await req.json(); } catch (e) { return json({ ok: false, error: 'corps invalide' }, 400); }
+  const blob = String((b && b.blob) || '');
+  if (!/^[A-Za-z0-9+/=]{16,}$/.test(blob) || blob.length > SYNC_MAX) return json({ ok: false, error: 'blob invalide ou trop gros' }, 413);
+  const now = Date.now();
+  if (!row) {
+    await env.DB.prepare('INSERT INTO sync (id, verifier, blob, v, updated) VALUES (?, ?, ?, 1, ?)').bind(id, ver, blob, now).run();
+    return json({ ok: true, v: 1, updated: now });
+  }
+  if (Number(b.base) !== row.v) return json({ ok: false, error: 'conflit', v: row.v, updated: row.updated }, 409);
+  await env.DB.prepare('UPDATE sync SET blob = ?, v = v + 1, updated = ? WHERE id = ?').bind(blob, now, id).run();
+  return json({ ok: true, v: row.v + 1, updated: now });
+}
+
+/* ---------- Statistiques d'usage anonymes ----------
+   Compteurs agrégés par jour dans D1 (table ev : jour, nom d'événement, propriété, total). Aucun identifiant, aucune adresse IP, aucun cookie :
+   on ne peut pas retrouver une personne. Événements acceptés : liste blanche ci-dessous ; propriétés tronquées. Lecture : GET /api/admin/stats (clé propriétaire). */
+const EVENTS = new Set(['gate_view', 'login', 'account_deleted', 'cloud_enabled', 'cloud_restore', 'open', 'install', 'setup_view', 'plan_created', 'plan_changed', 'race_pick', 'search_miss', 'garmin_connected']);
+async function pubEvent(req, env) {
+  if (!env.DB) return json({ ok: false }, 200);
+  let b = null;
+  try { b = await req.json(); } catch (e) { return json({ ok: false }, 400); }
+  const name = String((b && b.e) || '');
+  if (!EVENTS.has(name)) return json({ ok: false }, 400);
+  const prop = String((b && b.p) || '').toLowerCase().replace(/[^a-z0-9àâäçéèêëîïôöùûüÿœ'’ .:|_+/-]/g, '').trim().slice(0, 60);
+  await env.DB.prepare('INSERT INTO ev (day, name, prop, n) VALUES (?, ?, ?, 1) ON CONFLICT(day, name, prop) DO UPDATE SET n = n + 1').bind(ymd(new Date()), name, prop).run();
+  return json({ ok: true });
+}
+async function adminStats(url, env) {
+  if (!env.DB) return json({ error: 'base de statistiques non configurée' }, 501);
+  const days = Math.max(1, Math.min(365, Number(url.searchParams.get('days')) || 30));
+  const since = ymd(new Date(Date.now() - days * 86400000));
+  const rows = (await env.DB.prepare('SELECT day, name, prop, n FROM ev WHERE day >= ? ORDER BY day').bind(since).all()).results || [];
+  const tot = {}, daily = {}, top = {};
+  for (const r of rows) {
+    tot[r.name] = (tot[r.name] || 0) + r.n;
+    (daily[r.day] = daily[r.day] || {})[r.name] = ((daily[r.day] || {})[r.name] || 0) + r.n;
+    if (r.prop) { (top[r.name] = top[r.name] || {})[r.prop] = (top[r.name][r.prop] || 0) + r.n; }
+  }
+  const ranked = {};
+  for (const k of Object.keys(top)) ranked[k] = Object.entries(top[k]).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  return json({ ok: true, days, since, totals: tot, daily, top: ranked });
 }
 
 /* ---------- utilitaires ---------- */
@@ -70,7 +310,7 @@ function addCors(req, env, res) {
   const value = allowed.includes('*') ? '*' : allowed.includes(origin) ? origin : allowed[0];
   const h = new Headers(res.headers);
   h.set('Access-Control-Allow-Origin', value);
-  h.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  h.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Icu-Key, X-Sync-Write, X-Session');
   h.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   h.set('Vary', 'Origin');
   return new Response(res.body, { status: res.status, headers: h });
@@ -82,6 +322,24 @@ function safeEq(a, b) {
   let r = 0;
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
+}
+/* ---------- Deux façons de s'authentifier ----------
+   1) Mode propriétaire : « Authorization: Bearer APP_KEY » → on utilise la clé intervals.icu enregistrée dans les secrets du Worker
+      et le cache KV (fonctionnement historique, inchangé).
+   2) Mode public : « X-Icu-Key: <clé API intervals.icu de l'utilisateur> » → relais SANS ÉTAT : la clé n'est jamais enregistrée,
+      aucune activité n'est stockée sur le serveur (ni KV ni base) ; tout est relu chez intervals.icu à chaque appel.
+   Dans les deux cas on renvoie un « env » dérivé : le reste du code ne change pas. */
+const NOKV = { get: async () => null, put: async () => {}, delete: async () => {} };
+function credentials(req, env) {
+  if (authorized(req, env)) return env;
+  const k = (req.headers.get('X-Icu-Key') || '').trim();
+  if (!/^[A-Za-z0-9_-]{10,80}$/.test(k)) return null;
+  const since = new Date(Date.now() - 400 * 86400000);
+  return { ...env, INTERVALS_API_KEY: k, INTERVALS_ATHLETE_ID: '0', SINCE: ymd(since), KV: NOKV, STATELESS: true, APP_KEY: '' };
+}
+async function keyHash(k) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(k));
+  return [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 function authorized(req, env) {
   const m = /^Bearer (.+)$/.exec(req.headers.get('Authorization') || '');
@@ -178,18 +436,23 @@ function compact(a) {
   return o;
 }
 
+async function compute(env) {
+  const raw = await loadActivities(env);
+  if (!Array.isArray(raw)) throw new Error('réponse inattendue d’intervals.icu');
+  const good = raw.filter(usable);
+  const acts = good.map(compact).sort((x, y) => y.s.localeCompare(x.s));
+  const withZ = good.filter((a) => Array.isArray(a.icu_hr_zones)).sort((x, y) => String(y.start_date_local).localeCompare(String(x.start_date_local)))[0];
+  const meta = withZ ? { hrz: withZ.icu_hr_zones, lthr: withZ.lthr || 0, maxhr: withZ.athlete_max_hr || 0 } : null;
+  return { acts, meta, skipped: raw.length - acts.length };
+}
 async function sync(env) {
   try {
-    const raw = await loadActivities(env);
-    if (!Array.isArray(raw)) throw new Error('réponse inattendue d’intervals.icu');
-    const good = raw.filter(usable);
-    const acts = good.map(compact).sort((x, y) => y.s.localeCompare(x.s));
-    const withZ = good.filter((a) => Array.isArray(a.icu_hr_zones)).sort((x, y) => String(y.start_date_local).localeCompare(String(x.start_date_local)))[0];
-    if (withZ) await env.KV.put('meta', JSON.stringify({ hrz: withZ.icu_hr_zones, lthr: withZ.lthr || 0, maxhr: withZ.athlete_max_hr || 0 }));
+    const { acts, meta, skipped } = await compute(env);
+    if (meta) await env.KV.put('meta', JSON.stringify(meta));
     await env.KV.put('acts', JSON.stringify(acts));
     await env.KV.put('synced', String(Date.now()));
     await env.KV.delete('error');
-    return { ok: true, count: acts.length, skipped: raw.length - acts.length };
+    return { ok: true, count: acts.length, skipped };
   } catch (e) {
     await env.KV.put('error', String((e && e.message) || e));
     return { ok: false, error: String((e && e.message) || e) };
@@ -202,6 +465,16 @@ async function state(env) {
   return { acts: acts || [], synced: Number(synced) || 0, error: error || '', meta: meta || null };
 }
 async function apiActivities(url, env) {
+  if (env.STATELESS) {
+    try {
+      const { acts, meta } = await compute(env);
+      const since = (url.searchParams.get('since') || '').slice(0, 10);
+      return json({ connected: true, updated: Date.now(), error: '', meta, activities: since ? acts.filter((a) => (a.s || '').slice(0, 10) >= since) : acts });
+    } catch (e) {
+      const m = String((e && e.message) || e);
+      return json({ connected: false, updated: 0, error: m, meta: null, activities: [] }, /refuse la clé/.test(m) ? 401 : 200);
+    }
+  }
   let st = await state(env);
   if (Date.now() - st.synced > STALE_MS) {
     await sync(env);
@@ -213,10 +486,27 @@ async function apiActivities(url, env) {
   return json({ connected: st.synced > 0, updated: st.synced, error: st.error, meta: st.meta, activities: acts });
 }
 async function apiStatus(env) {
+  if (env.STATELESS) {
+    try {
+      const a = await intervalsGet(env, '/athlete/0');
+      return json({ configured: true, connected: true, updated: Date.now(), error: '', cached: 0, athlete: String((a && (a.name || a.firstname)) || '').slice(0, 40) });
+    } catch (e) {
+      return json({ configured: true, connected: false, error: String((e && e.message) || e) }, /refuse la clé/.test(String(e && e.message)) ? 401 : 200);
+    }
+  }
   const st = await state(env);
   return json({ configured: !!env.INTERVALS_API_KEY, connected: st.synced > 0, updated: st.synced, error: st.error, cached: st.acts.length });
 }
 async function apiSync(env) {
+  if (env.STATELESS) {
+    try {
+      const { acts } = await compute(env);
+      return json({ ok: true, count: acts.length });
+    } catch (e) {
+      const m = String((e && e.message) || e);
+      return json({ ok: false, error: m }, /refuse la clé/.test(m) ? 401 : 502);
+    }
+  }
   const r = await sync(env);
   return json(r, r.ok ? 200 : 502);
 }
@@ -306,6 +596,12 @@ function buildDetail(d, streams) {
 async function apiActivity(url, env) {
   const id = (url.searchParams.get('id') || '').replace(/[^\w-]/g, '');
   if (!id) return json({ error: 'id manquant' }, 400);
+  let ck = null;
+  if (env.STATELESS && typeof caches !== 'undefined') {
+    ck = new Request('https://cache.local/det/' + (await keyHash(env.INTERVALS_API_KEY)) + '/' + id);
+    const hit = await caches.default.match(ck);
+    if (hit) return hit;
+  }
   const cached = await env.KV.get('det2:' + id, 'json');
   if (cached) return json(cached);
   const [d, st] = await Promise.all([
@@ -314,6 +610,11 @@ async function apiActivity(url, env) {
   ]);
   const out = buildDetail(d, st);
   await env.KV.put('det2:' + id, JSON.stringify(out), { expirationTtl: 60 * 86400 });
+  if (ck) {
+    const res = new Response(JSON.stringify(out), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, max-age=86400' } });
+    await caches.default.put(ck, res.clone());
+    return res;
+  }
   return json(out);
 }
 
