@@ -71,7 +71,7 @@ function addCors(req, env, res) {
   const h = new Headers(res.headers);
   h.set('Access-Control-Allow-Origin', value);
   h.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  h.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  h.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   h.set('Vary', 'Origin');
   return new Response(res.body, { status: res.status, headers: h });
 }

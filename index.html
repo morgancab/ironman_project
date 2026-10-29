@@ -825,7 +825,7 @@ function actBlock(s){
   if(s.sp==='rest'||s.sp==='race')return '';
   var a=LK.s2a[s.id],sv=state.sv||{};
   if(a)return '<div class="act"><b>Activité Garmin</b><div class="an">'+esc(a.n)+'</div><div class="small muted">'+esc(actDate(a)+' · '+actLine(a))+'</div><button class="btn" style="margin:10px 0 8px" data-act="actdetail" data-aid="'+esc(a.id)+'">Voir le détail de l’activité</button><div class="btns"><button class="btn" data-act="pickact" data-sid="'+s.id+'">Changer</button><button class="btn" data-act="unlink" data-aid="'+esc(a.id)+'">Dissocier</button></div></div>';
-  if(sv.url&&sv.key)return '<div class="act"><b>Garmin</b><div class="small muted">Aucune activité associée'+(state.done[s.id]?' (cochée à la main)':'')+'.</div><button class="btn" style="margin:10px 0 0" data-act="pickact" data-sid="'+s.id+'">Associer une activité Garmin</button></div>';
+  if(sv.url&&sv.key)return '<div class="act"><b>Activité réalisée</b><div class="small muted">Aucune activité associée'+(state.done[s.id]?' (cochée à la main)':'')+'.</div><button class="btn" style="margin:10px 0 0" data-act="pickact" data-sid="'+s.id+'">Associer une activité Garmin</button></div>';
   return '';
 }
 
@@ -989,35 +989,20 @@ function wkText(wk){
     return l.replace(/\{([RBS]):(\w+)\}/g,function(_,t,k){return wkTgt(t,k);}).replace(/\s+$/,'');
   }).join('\n');
 }
+// Nom de la séance dans Garmin : jour + date + sport et type de séance + durée (distance pour la natation). Ex. « Jeu 3 juin · Course Allure Ironman · 1h15 »
+function evName(s){
+  var d=addDays(PLAN_START,sessIdx(s)),dt=DAYS[s.d].slice(0,3)+' '+dnum(d)+' '+MONTHS[d.getMonth()].replace('.','');
+  var q=s.sp==='swim'&&s.m?km(s.m)+' km':fm(s.min).replace(/ h /,'h').replace(/ h$/,'h').replace(/ min$/,'min');
+  var t=s.title.replace(' · ',' '),n=dt+' · '+t+' · '+q;
+  if(n.length>48)n=dt+' · '+t;                                   // trop long : on garde la date et le titre
+  if(n.length>48)n=n.slice(0,47).replace(/\s+\S*$/,'')+'…';       // encore trop long : on tronque proprement
+  return n;
+}
 function evOf(s){
   var d=addDays(PLAN_START,sessIdx(s)),type={swim:'Swim',bike:'Ride',run:'Run',brick:'Run',str:'WeightTraining'}[s.sp];
-  return {category:'WORKOUT',start_date_local:isoDate(d)+'T00:00:00',type:type,name:s.title,description:s.wk?wkText(s.wk):s.lines.map(function(l){return tx(l);}).join('\n'),external_id:'im27:'+s.id};
+  return {category:'WORKOUT',start_date_local:isoDate(d)+'T00:00:00',type:type,name:evName(s),description:s.wk?wkText(s.wk):s.lines.map(function(l){return tx(l);}).join('\n'),external_id:'im27:'+s.id};
 }
 var pushing=false;
-function pushRange(fi,ti,loud){
-  var sv=state.sv;
-  if(!sv.url||!sv.key){if(loud)toast('Configure d’abord la synchronisation (Réglages)');return Promise.resolve(null);}
-  if(pushing)return Promise.resolve(null);
-  var list=ALLS.filter(function(s){var i=sessIdx(s);return i>=fi&&i<=ti&&s.sp!=='race'&&!isDone(s);});
-  pushing=true;
-  var o=isoDate(addDays(PLAN_START,fi)),n=isoDate(addDays(PLAN_START,ti));
-  return svFetch('/api/events?oldest='+o+'&newest='+n).then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);return r.json();}).then(function(ex){
-    var by={},want={},ops=[],cnt={c:0,u:0,d:0},chain=Promise.resolve();
-    (Array.isArray(ex)?ex:[]).forEach(function(e){if(e.external_id&&String(e.external_id).indexOf('im27:')===0)by[e.external_id]=e;});
-    list.forEach(function(s){
-      var ev=evOf(s),e=by[ev.external_id];want[ev.external_id]=1;
-      if(!e)ops.push(['POST','/api/events',ev,'c']);
-      else if(e.description!==ev.description||e.name!==ev.name||e.type!==ev.type||String(e.start_date_local).slice(0,10)!==ev.start_date_local.slice(0,10))ops.push(['PUT','/api/events/'+e.id,ev,'u']);
-    });
-    Object.keys(by).forEach(function(k){if(!want[k])ops.push(['DELETE','/api/events/'+by[k].id,null,'d']);});
-    ops.forEach(function(op){chain=chain.then(function(){return svFetch(op[1],{method:op[0],headers:{'Content-Type':'application/json'},body:op[2]?JSON.stringify(op[2]):undefined}).then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);cnt[op[3]]++;});});});
-    return chain.then(function(){return cnt;});
-  }).then(function(c){
-    pushing=false;state.ui.lastPush=Date.now();save();
-    if(loud)toast(!(c.c+c.u+c.d)?(list.length?'Déjà à jour : '+list.length+' séance'+(list.length>1?'s':'')+' dans ton calendrier':'Aucune séance à envoyer sur cette période'):c.c+' envoyée'+(c.c>1?'s':'')+(c.u?' · '+c.u+' mise'+(c.u>1?'s':'')+' à jour':'')+(c.d?' · '+c.d+' retirée'+(c.d>1?'s':''):''));
-    return c;
-  }).catch(function(e){pushing=false;var m=(e&&e.message)||'Échec';if(loud)toast(m==='Failed to fetch'||m==='Load failed'?'Serveur injoignable':m);return null;});
-}
 /* Semaine d’essai : la semaine 1 du plan est envoyée sur les 6 prochains jours, marquée [ESSAI], pour voir à quoi ressemblent les séances sur la montre */
 function previewList(){return ALLS.filter(function(s){return s.w===1&&s.sp!=='race';});}
 function previewOps(){
@@ -1056,15 +1041,40 @@ function clearPreview(){
     .then(function(n){pushing=false;toast(n?n+' séance'+(n>1?'s':'')+' d’essai retirée'+(n>1?'s':''):'Aucune séance d’essai à retirer');})
     .catch(function(e){pushing=false;toast(errTxt(e));});
 }
-function pushWindow(loud){var t0=Math.max(0,diffDays(today(),PLAN_START));return pushRange(t0,t0+13,loud);}
-function maybeAutoPush(){if(state.ui.autopush&&Date.now()-(state.ui.lastPush||0)>6*3600*1000&&diffDays(RACE_DATE,today())>=0)pushWindow(false);}
+/* Envoi d'UNE séance vers Garmin (bouton dans le détail de la séance) */
+function garminBlock(s){
+  var sv=state.sv,di=sessIdx(s)-diffDays(today(),PLAN_START);          // jours restants avant la séance
+  if(!(sv.url&&sv.key)||s.sp==='rest'||s.sp==='race'||di<0)return '';
+  var sent=(state.ui.sent||{})[s.id];
+  // intervals.icu ne transmet à Garmin que les 7 prochains jours : une séance lointaine n'est pas visible sur Garmin tout de suite
+  var later=di>7?' Elle n’apparaîtra dans Garmin Connect et sur ta montre qu’à partir du '+fmtDay(addDays(PLAN_START,sessIdx(s)-7))+' : intervals.icu ne transmet à Garmin que les 7 prochains jours (tu la vois déjà dans ton calendrier intervals.icu).':'';
+  return '<div class="act"><b>Envoi vers la montre</b>'+(sent
+    ?'<div class="small muted">Envoyée '+ago(sent)+' vers ton calendrier intervals.icu, puis Garmin Connect et ta montre.'+later+'</div><button class="btn" style="margin:10px 0 0" data-act="pushsess" data-id="'+s.id+'">Renvoyer</button>'
+    :'<div class="small muted">Envoie cette séance (étapes et cibles) vers ta montre, via intervals.icu.'+later+'</div><button class="btn pri" style="margin:10px 0 0" data-act="pushsess" data-id="'+s.id+'">Envoyer vers Garmin</button>')+'</div>';
+}
+function dayEvents(d){
+  return svFetch('/api/events?oldest='+d+'&newest='+d).then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);return r.json();}).then(function(ex){return Array.isArray(ex)?ex:[];});
+}
+function pushSession(sid){
+  var s=SBY[sid],sv=state.sv;
+  if(!s)return Promise.resolve();
+  if(!sv.url||!sv.key){toast('Configure d’abord la synchronisation (Réglages)');return Promise.resolve();}
+  if(pushing)return Promise.resolve();
+  pushing=true;
+  var ev=evOf(s);
+  return dayEvents(ev.start_date_local.slice(0,10)).then(function(ex){
+    var e=ex.filter(function(x){return x.external_id===ev.external_id;})[0];
+    return svFetch(e?'/api/events/'+e.id:'/api/events',{method:e?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ev)})
+      .then(function(r){if(!r.ok)throw new Error('Erreur '+r.status);return e?'mise à jour':'envoyée';});
+  }).then(function(w){
+    pushing=false;(state.ui.sent=state.ui.sent||{})[sid]=Date.now();save();render(true);
+    toast('Séance '+w+' : '+s.title);return w;
+  }).catch(function(e){pushing=false;toast(errTxt(e));return null;});
+}
 function pushSettings(){
-  var on=!!state.ui.autopush;
-  return '<h4>Envoi des séances vers Garmin</h4><p>Chaque séance est envoyée par étapes (échauffement, séries, cibles d’allure ou de zone de FC) dans ton calendrier intervals.icu, qui la transmet à Garmin Connect puis à ta montre (réglage « Upload planned workouts » d’intervals.icu). Une séance faite disparaît du calendrier.</p>'+
-    '<div class="row" style="margin:0 0 10px"><div style="flex:1"><b style="font-size:14.5px">Envoi automatique</b><div class="small muted">Chaque jour, les 14 prochains jours, avec tes cibles à jour</div></div><button class="chip'+(on?' hl':'')+'" style="border:0;min-height:36px;padding:0 16px" data-act="autopush" aria-pressed="'+on+'">'+(on?'Oui':'Non')+'</button></div>'+
-    '<button class="btn pri" data-act="pushnow">Envoyer maintenant les 14 prochains jours</button>'+
-    '<p class="small muted" style="margin:8px 0">Le plan ne commence qu’en janvier ? Pour voir dès maintenant à quoi ressemblent les séances sur ta montre, envoie la semaine 1 en essai (marquée [ESSAI], sur les 6 prochains jours).</p><div class="btns"><button class="btn" data-act="pushprev">Envoyer une semaine d’essai</button><button class="btn" data-act="clearprev">Retirer l’essai</button></div>'+
-    '<p class="small muted">'+(state.ui.lastPush?'Dernier envoi : '+ago(state.ui.lastPush)+'. ':'')+'Le plan commence le '+fmtDay(PLAN_START)+' '+PLAN_START.getFullYear()+'.</p>';
+  return '<h4>Envoi des séances vers Garmin</h4><p>Ouvre une séance (onglet Semaine) et touche « Envoyer vers Garmin » : elle part par étapes (échauffement, séries, cibles d’allure ou de FC) vers ton calendrier intervals.icu, qui la transmet à Garmin Connect puis à ta montre (réglage « Upload planned workouts » d’intervals.icu).</p>'+
+    '<p class="small muted" style="margin:8px 0">Pour voir dès maintenant à quoi ressemblent les séances sur ta montre, envoie la semaine 1 en essai (marquée [ESSAI], sur les 6 prochains jours).</p><div class="btns"><button class="btn" data-act="pushprev">Envoyer une semaine d’essai</button><button class="btn" data-act="clearprev">Retirer l’essai</button></div>'+
+    '<p class="small muted">Le plan commence le '+fmtDay(PLAN_START)+' '+PLAN_START.getFullYear()+'.</p>';
 }
 function hasProf(){var p=state.ui.prof||{};return !!(p.ftp||p.fc||p.thr||p.css);}
 function ago(t){if(!t)return 'jamais';var m=Math.round((Date.now()-t)/6e4);return m<1?'à l’instant':m<60?'il y a '+m+' min':m<1440?'il y a '+Math.round(m/60)+' h':'il y a '+Math.round(m/1440)+' j';}
@@ -1136,7 +1146,6 @@ function vWeek(){
   if(st.s==='before')h+='<div class="banner">'+ic('info',20)+'<div><b>Le programme n’a pas encore commencé.</b> Il démarre le '+fmtLong(PLAN_START).toLowerCase()+', dans '+st.days+' jour'+(st.days>1?'s':'')+'. Tu peux déjà consulter les semaines à venir.</div></div>';
   h+='<section class="card"><div class="row"><h2 style="margin:0">Avancement</h2><span class="sp"></span><span class="chip">'+ws.d+' / '+ws.n+' séances</span></div><div style="height:12px"></div>'+
     bar(pct(ws.d,ws.n))+'<div class="row small muted" style="margin-top:8px"><span>'+fh(ws.dmin)+' réalisées</span><span class="sp"></span><span>'+fh(ws.min)+' prévues'+(ws.m?' · '+km(ws.m)+' km nage':'')+'</span></div></section>';
-  if(state.sv.url&&state.sv.key&&wv>=st.w&&st.s!=='after')h+='<button class="btn" data-act="pushweek" style="margin:0 0 14px">Envoyer cette semaine vers Garmin</button>';
   h+='<section class="card theme"><div class="eyebrow">Thème de la semaine</div><div class="t">'+esc(wk.theme)+'</div><p>'+esc(wk.kind==='rec'?'Semaine de décharge : le volume baisse d’environ un tiers. Garde les séances faciles, dors plus, mange bien. C’est ici que tu absorbes la charge et que tu progresses.':wk.ph.tip)+'</p></section>';
   wk.days.forEach(function(day){
     var isToday=diffDays(day.date,t)===0,real=day.sessions.filter(function(s){return s.sp!=='rest';}),dn=real.filter(function(s){return isDone(s);}).length;
@@ -1154,7 +1163,7 @@ function sessCard(s,isToday){
   var h='<div class="sess sp-'+s.sp+(ok?' done':'')+(isOpen?' open':'')+'" data-sid="'+s.id+'"><div class="s-row">'+
     '<button class="s-main" data-act="open" data-id="'+s.id+'" aria-expanded="'+isOpen+'"><span class="s-ic">'+ic(s.sp,24)+'</span><span class="s-txt"><span class="s-t">'+esc(s.title)+'</span><span class="s-m">'+esc(meta.join(' · '))+(s.sum&&s.sp!=='race'&&s.sp!=='rest'?'<br>'+esc(s.sum):'')+(a?'<br><b class="sv">Garmin</b> '+esc(actLine(a)+actWhen(a,s)):'')+'</span></span><span class="s-chev">'+ic('down',20)+'</span></button>'+
     '<button class="chk" role="checkbox" aria-checked="'+ok+'" aria-label="'+(s.sp==='race'?'Course terminée':s.sp==='rest'?'Repos respecté':'Séance réalisée')+' : '+esc(s.title)+'" data-act="toggle" data-id="'+s.id+'"><i>'+ic('check',18)+'</i></button></div>'+
-    '<div class="s-det">'+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+'<ul>'+s.lines.map(function(l){return '<li>'+esc(tx(l))+'</li>';}).join('')+'</ul>'+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+'</div></div>';
+    '<div class="s-det">'+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+'<ul>'+s.lines.map(function(l){return '<li>'+esc(tx(l))+'</li>';}).join('')+'</ul>'+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+garminBlock(s)+'</div></div>';
   if(s.sp==='rest')h=h.replace(/<button class="chk".*?<\/button>/,'');
   return h;
 }
@@ -1312,11 +1321,9 @@ document.addEventListener('click',function(e){
   else if(a==='syncsv')syncActs(true,true);
   else if(a==='allacts')openAllActs();
   else if(a==='actdetail')openActDetail(d.aid);
-  else if(a==='pushnow')pushWindow(true);
+  else if(a==='pushsess')pushSession(d.id);
   else if(a==='pushprev')pushPreview();
   else if(a==='clearprev')clearPreview();
-  else if(a==='pushweek'){var w0=(wv-1)*7;pushRange(Math.max(w0,diffDays(today(),PLAN_START)),w0+6,true);}
-  else if(a==='autopush'){state.ui.autopush=!state.ui.autopush;save();openSheet();if(state.ui.autopush)pushWindow(true);}
   else if(a==='rcscen'){(state.ui.race=state.ui.race||{}).scen=d.v;save();render(true);}
   else if(a==='rcwet'){var rp=state.ui.race=state.ui.race||{};rp.wet=!(rp.wet!==false);save();render(true);}
   else if(a==='dsh'){state.ui.dsh=d.v;save();render(false);}
@@ -1980,7 +1987,6 @@ function syncActs(force,loud){
       var acts=j.activities||[],changed=JSON.stringify(acts)!==JSON.stringify(sv.acts||[])||sv.conn!==!!j.connected||!!sv.err||(sv.werr||'')!==(j.error||'');
       sv.acts=acts;if(j.meta){if(j.meta.hrz)sv.hrz=j.meta.hrz;sv.meta=j.meta;}sv.conn=!!j.connected;sv.werr=j.error||'';sv.t=Date.now();sv.err='';save();
       if(loud)toast('Activités synchronisées');
-      setTimeout(maybeAutoPush,1500);
       if(changed||loud)safeRender();
     })
     .catch(function(e){
@@ -2031,7 +2037,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={pushPreview:pushPreview,clearPreview:clearPreview,pushWindow:pushWindow,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
 render(false);
 (function(){
   syncActs(true);
