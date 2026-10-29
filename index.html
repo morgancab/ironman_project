@@ -442,7 +442,12 @@ h1{font-size:32px;letter-spacing:-.035em}
 .spl .b{opacity:.5}
 .spl .b.fast{opacity:1}
 .spl .pf{font-weight:700;color:var(--t1)}
-@media (prefers-reduced-motion:reduce){.skel i{animation:none}#view.enter>*{animation:none}html{scroll-behavior:auto}}
+/* balayage entre semaines */
+#view.slide-l{animation:slideL .28s cubic-bezier(.2,.8,.2,1)}
+#view.slide-r{animation:slideR .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes slideL{from{opacity:.2;transform:translateX(36px)}to{opacity:1;transform:none}}
+@keyframes slideR{from{opacity:.2;transform:translateX(-36px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#view.slide-l,#view.slide-r{animation:none}.skel i{animation:none}#view.enter>*{animation:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -1693,6 +1698,25 @@ document.addEventListener('input',function(e){
     var s=document.getElementById('saved');if(s)s.textContent='Enregistré automatiquement';
   }
 });
+/* Semaine : balayage gauche / droite pour changer de semaine (les flèches restent) */
+(function(){
+  var sx=0,sy=0,st=0,ok=false;
+  document.addEventListener('touchstart',function(e){
+    var t=e.touches&&e.touches[0],w=window.innerWidth||390;
+    ok=!!t&&e.touches.length===1&&tab==='week'&&!document.getElementById('sheetbg').classList.contains('on')&&t.clientX>24&&t.clientX<w-24&&!(e.target.closest&&e.target.closest('input,textarea,select,svg[data-ch]'));
+    if(ok){sx=t.clientX;sy=t.clientY;st=Date.now();}
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!ok)return;ok=false;
+    var t=e.changedTouches&&e.changedTouches[0];if(!t)return;
+    var dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Date.now()-st>700||Math.abs(dx)<60||Math.abs(dx)<1.6*Math.abs(dy))return;
+    var nw=Math.max(1,Math.min(NW,wv+(dx<0?1:-1)));
+    if(nw===wv)return;
+    wv=nw;render(false);
+    var vw=document.getElementById('view');vw.className=dx<0?'slide-l':'slide-r';
+  },{passive:true});
+})();
 document.getElementById('sheetbg').addEventListener('click',function(e){if(e.target.id==='sheetbg'){if(state.ui.welcomed===undefined){state.ui.welcomed=true;save();}closeSheet();}});
 document.getElementById('sheet').addEventListener('toggle',function(e){var d=e.target;if(d&&d.getAttribute&&d.getAttribute('data-fold'))sheetFold[d.getAttribute('data-fold')]=d.open;},true);
 
