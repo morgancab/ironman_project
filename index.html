@@ -1149,6 +1149,53 @@ function autoSummary(){
 /* ---------- Détail d'une séance : déroulé par blocs (durée, nom, pastilles de cibles) + conseils ---------- */
 var TOKN={R:{soft:'Facile',z2:'Endurance',tempo:'Tempo',im:'Allure Ironman'},B:{soft:'Facile',z2:'Endurance',ft:'Force-endurance',sw:'Sweet spot',im:'Allure Ironman'},S:{easy:'Souple',end:'Aisé',im:'Allure Ironman',css:'Seuil',fast:'Rapide'}};
 function durTxt(n,u){return u==='m'?(n<60?n+' min':fm(n)):u==='s'?n+' s':u==='mtr'?n+' m':n+' km';}
+/* ---------- Distance estimée des séances vélo / course : durée de chaque bloc × vitesse cible ----------
+   Vitesses : celles calculées depuis tes activités Garmin (autoProf) ; à défaut, repères par défaut (ou seuil saisi pour la course). */
+var DEF_RUN={soft:430,z2:390,tempo:330,im:375},DEF_BIKE={soft:23,z2:26,ft:28,sw:30,im:28};
+function tokKmh(t,k){
+  var ap=autoProf(),p=state.ui.prof||{},hz=ap&&ap.hz,v=0;
+  if(t==='R'){
+    var pace=0;
+    if(ap&&k==='im'&&ap.imRun)pace=ap.imRun;
+    else if(ap&&ap.runAt&&k!=='im'){
+      var d={soft:[0,hz[0]],z2:[hz[0]+1,hz[1]],tempo:[hz[2]+1,hz[3]]}[k],pa=d&&ap.runAt(d[1]),pb=d&&ap.runAt(d[0]||d[1]-10);
+      if(pa&&pb)pace=k==='soft'?pa*1.05:(pa+pb)/2;
+    }
+    if(!pace&&p.thr&&RN[k]&&RN[k][3]!==undefined)pace=p.thr+(RN[k][3]+RN[k][4])/2;
+    if(!pace)pace=DEF_RUN[k]||DEF_RUN.z2;
+    return 3600/pace;
+  }
+  if(t==='B'){
+    if(ap){
+      var fl={im:1,ft:1.03,sw:1.10}[k];
+      if(fl&&ap.imBike)v=ap.imBike*fl;
+      else if(ap.bikeAt){var z={soft:1,z2:2,ft:3,sw:4}[k];if(z===1)v=(ap.bikeAt(hz[0])||0)*0.95;else if(z){var sa=ap.bikeAt(hz[z-2]+1),sb=ap.bikeAt(hz[z-1]);if(sa&&sb)v=(sa+sb)/2;}}
+    }
+    return v||DEF_BIKE[k]||DEF_BIKE.z2;
+  }
+  return 0;
+}
+function estKm(s){
+  if(s.sp!=='bike'&&s.sp!=='run'&&s.sp!=='brick')return null;
+  var out={bike:0,run:0};
+  var acc=function(st,n){
+    var sport=st.t==='B'?'bike':st.t==='R'?'run':st.rest?(s.sp==='bike'?'bike':'run'):null;
+    if(!sport)return;
+    var v=st.rest?tokKmh(sport==='bike'?'B':'R','soft')*(sport==='run'?0.8:1):tokKmh(st.t,st.key),m;
+    m=st.u==='mtr'?st.val:st.u==='km'?st.val*1000:st.u==='s'?st.val*v/3.6:st.val*v*1000/60;
+    out[sport]+=m*n;
+  };
+  if(s.wk)wkBlocks(s.wk).forEach(function(r){if(r.k==='step')acc(r.st,1);else if(r.k==='rep')r.steps.forEach(function(st){acc(st,r.n);});});
+  else if(s.sp==='bike'||s.sp==='run')out[s.sp]=s.min*tokKmh(s.sp==='bike'?'B':'R','z2')*1000/60;
+  return out.bike+out.run>0?out:null;
+}
+function kmRound(m){var k=m/1000;return k<10?(Math.round(k*2)/2).toFixed(1).replace('.',','):String(Math.round(k));}
+function kmChips(s){
+  if(s.m)return '<span class="mc">'+km(s.m)+' km</span>';
+  var e=estKm(s);if(!e)return '';
+  var c=function(m,l){return m>=500?'<span class="mc" title="Distance estimée d’après tes allures cibles">≈ '+kmRound(m)+' km'+(l?' '+l:'')+'</span>':'';};
+  return s.sp==='brick'?c(e.bike,'vélo')+c(e.run,'course'):c(e.bike+e.run,'');
+}
 function wkBlocks(wk){
   var rows=[],sec='main',grp=null;
   var close=function(){if(grp){rows.push({k:'rep',n:grp.n,steps:grp.steps});grp=null;}};
@@ -1159,7 +1206,7 @@ function wkBlocks(wk){
     if(t.charAt(0)!=='-'){close();if(/^warmup$/i.test(t))sec='warm';else if(/^cooldown$/i.test(t))sec='cool';else{sec='main';if(!/^main$/i.test(t))rows.push({k:'head',text:t});}return;}
     m=/^-\s+(\d+)(m|s|mtr|km)(?:\s+(rest|\{([RBS]):(\w+)\}))?$/.exec(t);
     if(!m)return;
-    var st={sec:sec,dur:durTxt(+m[1],m[2]),rest:m[3]==='rest',t:m[4],key:m[5]};
+    var st={sec:sec,dur:durTxt(+m[1],m[2]),val:+m[1],u:m[2],rest:m[3]==='rest',t:m[4],key:m[5]};
     if(grp)grp.steps.push(st);
     else{
       var prev=rows[rows.length-1],f=prev&&prev.k==='rep'&&prev.steps[0];
@@ -1425,7 +1472,7 @@ function sessCard(s,isToday){
   var parts=s.title.split(' · '),over=parts.length>1?parts[0]:'',ttl=parts.length>1?parts.slice(1).join(' · '):s.title;
   if(s.sp==='race')mc='<span class="mc dur">'+esc(s.sum)+'</span>';
   else if(s.sp==='rest')mc='<span class="mc">Récupération</span>';
-  else mc='<span class="mc dur">'+fh(s.min)+'</span>'+(s.m?'<span class="mc">'+km(s.m)+' km</span>':'')+'<span class="mc">'+esc(s.tag)+'</span>';
+  else mc='<span class="mc dur">'+fh(s.min)+'</span>'+kmChips(s)+'<span class="mc">'+esc(s.tag)+'</span>';
   var h='<div class="sess sp-'+s.sp+(ok?' done':'')+(isOpen?' open':'')+'" data-sid="'+s.id+'"><div class="s-row">'+
     '<button class="s-main" data-act="open" data-id="'+s.id+'" aria-expanded="'+isOpen+'"><span class="s-ic">'+ic(s.sp,24)+'</span><span class="s-txt">'+(over?'<span class="s-ov">'+esc(over)+'</span>':'')+'<span class="s-t">'+esc(ttl)+'</span><span class="s-m">'+mc+'</span>'+
       (s.sum&&s.sp!=='race'&&s.sp!=='rest'?'<span class="s-sum">'+esc(s.sum)+'</span>':'')+(a?'<span class="s-sum"><b class="sv">Garmin</b> '+esc(actLine(a)+actWhen(a,s))+'</span>':'')+'</span><span class="s-chev">'+ic('down',20)+'</span></button>'+
@@ -1599,6 +1646,7 @@ document.addEventListener('click',function(e){
     if(d.v==='custom'&&!f.from){var rr=dRange(dataActs());f.from=isoDate(rr.from);f.to=isoDate(rr.to);}
     f.m=d.v;dsel=null;save();render(true);
   }
+  else if(a==='dmetric'){state.ui.dmetric=d.v==='dist'?'dist':'time';save();render(true);}
   else if(a==='dchart'){
     var wl=(el.parentNode.getAttribute('data-wks')||'').split(',').map(Number),cr=el.getBoundingClientRect(),cx=(e.clientX-cr.left)/cr.width*340,ci=Math.floor((cx-30)/((340-30-4)/wl.length));
     dsel=wl[Math.max(0,Math.min(wl.length-1,ci))];render(true);
@@ -1925,12 +1973,14 @@ function paceTxt(k,m,s){
   if(k==='bike')return (v*3.6).toFixed(1).replace('.',',')+' km/h';
   return '–';
 }
+// unité d'affichage de la section Données : durée (par défaut) ou distance
+function dMetric(){return state.ui.dmetric==='dist'?'dist':'time';}
 function weekAgg(acts){
   var m={};
   acts.forEach(function(a){
     var w=wIdx(a),o=m[w];
-    if(!o)o=m[w]={w:w,n:0,l:0,sec:0,swim:0,bike:0,run:0,str:0,oth:0};
-    var k=skey(a);o[k]+=a.d;o.sec+=a.d;o.n++;o.l+=a.l||0;
+    if(!o)o=m[w]={w:w,n:0,l:0,sec:0,msum:0,dm:{swim:0,bike:0,run:0,str:0,oth:0},swim:0,bike:0,run:0,str:0,oth:0};
+    var k=skey(a);o[k]+=a.d;o.sec+=a.d;o.n++;o.l+=a.l||0;o.dm[k]+=a.m||0;o.msum+=a.m||0;
   });
   return m;
 }
@@ -1983,10 +2033,10 @@ function fitChart(S){
   return s+hvLayer()+'</svg>';
 }
 function stackChart(wks,agg,sel){
-  var W=340,H=170,L=30,B=20,T=8,R=4,n=wks.length,slot=(W-L-R)/n,bw=Math.min(24,Math.max(3,slot-2)),mx=0,v;
-  wks.forEach(function(w){var o=agg[w];if(o)mx=Math.max(mx,o.sec/3600);});
-  var sc=niceScale(Math.max(mx,1)),yv=function(q){return T+(H-T-B)*(1-q/sc.top);};
-  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Volume hebdomadaire par discipline, en heures. Survole ou touche une barre pour le détail." data-act="dchart" data-ch="vol">',pts=[];
+  var W=340,H=170,L=30,B=20,T=8,R=4,n=wks.length,slot=(W-L-R)/n,bw=Math.min(24,Math.max(3,slot-2)),mx=0,v,dist=dMetric()==='dist',val=function(o,k){return dist?(o.dm[k]||0)/1000:o[k]/3600;};
+  wks.forEach(function(w){var o=agg[w];if(o){var tt=0;['swim','bike','run','str','oth'].forEach(function(k){tt+=val(o,k);});mx=Math.max(mx,tt);}});
+  var sc=niceScale(Math.max(mx,dist?5:1)),yv=function(q){return T+(H-T-B)*(1-q/sc.top);};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Volume hebdomadaire par discipline, en '+(dist?'kilomètres':'heures')+'. Survole ou touche une barre pour le détail." data-act="dchart" data-ch="vol">',pts=[];
   for(v=0;v<=sc.top+1e-9;v+=sc.step)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yv(v)+'" y2="'+yv(v)+'" stroke="'+(v?'#2c2c2e':'#48484a')+'"/><text x="'+(L-6)+'" y="'+(yv(v)+3.5)+'" text-anchor="end" font-size="10" fill="#85847d">'+v+'</text>';
   var lastM=-1,lblEvery=n>30?Math.ceil(n/10):1;
   wks.forEach(function(w,i){
@@ -1995,9 +2045,9 @@ function stackChart(wks,agg,sel){
     if(w===sel)s+='<rect x="'+(L+i*slot)+'" y="'+T+'" width="'+slot+'" height="'+(H-T-B)+'" rx="3" fill="rgba(255,255,255,.07)"/>';
     pts.push({x:L+i*slot+slot/2,tip:weekReadout(agg,w)});
     if(!o)return;
-    var keys=['swim','bike','run','str','oth'].filter(function(k){return o[k]>0;}),acc=0;
+    var keys=['swim','bike','run','str','oth'].filter(function(k){return val(o,k)>0;}),acc=0;
     keys.forEach(function(k,j){
-      var hrs=o[k]/3600,y1=yv(acc+hrs),y0=yv(acc),hh=Math.max(1.2,(y0-y1)-(acc>0?2:0));
+      var hrs=val(o,k),y1=yv(acc+hrs),y0=yv(acc),hh=Math.max(1.2,(y0-y1)-(acc>0?2:0));
       s+=j===keys.length-1?col(x,y1,bw,hh,SPCOL[k]):'<rect x="'+x+'" y="'+y1+'" width="'+bw+'" height="'+hh+'" fill="'+SPCOL[k]+'"/>';
       acc+=hrs;
     });
@@ -2009,8 +2059,9 @@ function weekReadout(agg,w){
   var o=agg[w],d=wStart(w);
   var t='<b>'+fmtDay(d)+' – '+fmtDay(addDays(d,6))+'</b>';
   if(!o||!o.n)return t+' · aucune activité';
-  var p=[];['swim','bike','run','str','oth'].forEach(function(k){if(o[k]>0)p.push(SPLBL[k].split(' ')[0]+' '+fmtSec(o[k]));});
-  return t+' · <b>'+fmtSec(o.sec)+'</b> · '+o.n+' séance'+(o.n>1?'s':'')+(o.l?' · charge '+o.l:'')+'<br>'+p.join(' · ');
+  var dist=dMetric()==='dist',p=[];['swim','bike','run','str','oth'].forEach(function(k){if(dist?o.dm[k]>0:o[k]>0)p.push(SPLBL[k].split(' ')[0]+' '+(dist?km(o.dm[k])+' km':fmtSec(o[k])));});
+  var main=dist?km(o.msum)+' km':fmtSec(o.sec),other=dist?fmtSec(o.sec):(o.msum>0?km(o.msum)+' km':'');
+  return t+' · <b>'+main+'</b>'+(other?' · '+other:'')+' · '+o.n+' séance'+(o.n>1?'s':'')+(o.l?' · charge '+o.l:'')+'<br>'+p.join(' · ');
 }
 function zonesHtml(zt,hz,compact){
   var tot=0,i;(zt||[]).forEach(function(s,i){if(i<7)tot+=s;});
@@ -2066,9 +2117,10 @@ function dFilterBar(R,n){
 function vData(){
   var all=dataActs(),sv=state.sv;
   if(!(sv.url&&sv.key)||!all.length)return vActs();
-  var cw=curWk(),aggAll=weekAgg(all),tw=aggAll[cw]||{n:0,l:0,sec:0},pw=aggAll[cw-1]||{n:0,l:0,sec:0},h='',d0=wStart(cw);
+  var cw=curWk(),aggAll=weekAgg(all),tw=aggAll[cw]||{n:0,l:0,sec:0,msum:0},pw=aggAll[cw-1]||{n:0,l:0,sec:0,msum:0},h='',d0=wStart(cw),dist=dMetric()==='dist';
+  h+='<div class="rng" style="margin:0 0 14px" role="group" aria-label="Unité d’affichage"><button data-act="dmetric" data-v="time" aria-pressed="'+!dist+'">Durée</button><button data-act="dmetric" data-v="dist" aria-pressed="'+dist+'">Distance</button></div>';
   h+='<div class="eyebrow" style="margin:0 0 8px">Cette semaine · '+fmtDay(d0)+' – '+fmtDay(addDays(d0,6))+'</div><div class="kpis">'+
-    kpi('Durée',fmtSec(tw.sec),dlt(tw.sec/60,pw.sec/60,function(q){return fh(Math.round(q));}))+
+    (dist?kpi('Distance',km(tw.msum)+' km',dlt(tw.msum/1000,pw.msum/1000,function(q){return q.toFixed(1).replace('.',',')+' km';})):kpi('Durée',fmtSec(tw.sec),dlt(tw.sec/60,pw.sec/60,function(q){return fh(Math.round(q));})))+
     kpi('Séances',tw.n,dlt(tw.n,pw.n,String))+
     kpi('Charge',tw.l||'0',dlt(tw.l,pw.l,String))+'</div>';
   var R=dRange(all),acts=all.filter(function(a){var d=dayIdx(a);return d>=R.fi&&d<=R.ti;}),agg=weekAgg(acts);
@@ -2089,9 +2141,9 @@ function vData(){
   for(w=w0;w<=w1;w++)wks.push(w);
   if(wks.length<2)wks=[w1-1,w1];
   var sel=dsel!==null&&wks.indexOf(dsel)>=0?dsel:w1;
-  h+=dataCard('Volume par semaine','heures',
+  h+=dataCard('Volume par semaine',dist?'kilomètres':'heures',
     '<div class="chartwrap" data-wks="'+wks.join(',')+'">'+stackChart(wks,agg,sel)+'</div>'+
-    '<div class="legend" style="flex-wrap:wrap">'+['swim','bike','run','str'].map(function(k){return '<span><i style="background:'+SPCOL[k]+'"></i>'+SPLBL[k].split(' ')[0]+'</span>';}).join('')+'</div>'+
+    '<div class="legend" style="flex-wrap:wrap">'+['swim','bike','run','str'].filter(function(k){return !(dist&&k==='str');}).map(function(k){return '<span><i style="background:'+SPCOL[k]+'"></i>'+SPLBL[k].split(' ')[0]+'</span>';}).join('')+'</div>'+(dist?'<p class="small muted" style="margin:6px 0 0">Le renforcement n’a pas de distance.</p>':'')+
     '<div class="readout" id="dro">'+weekReadout(agg,sel)+'</div>');
   // zones de FC
   var zt=[0,0,0,0,0,0,0];
@@ -2380,7 +2432,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={estKm:estKm,detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
 render(false);
 if(state.ui.welcomed===undefined){
   if(state.sv.url||Object.keys(state.done).length)state.ui.welcomed=true;
