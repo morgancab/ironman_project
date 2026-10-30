@@ -156,6 +156,12 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .kl{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
 .kv{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap}
 .ks{font-size:11.5px;color:var(--t2);margin-top:3px;line-height:1.25}
+.tin{display:flex;gap:10px}
+.tf{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
+.tf input{min-width:0;width:100%;height:48px;border-radius:12px;border:0;background:var(--card2);color:var(--t1);font-size:20px;font-weight:600;font-family:inherit;text-align:center;padding:0 4px;font-variant-numeric:tabular-nums}
+.tf span{flex:none;font-size:13px;color:var(--t2)}
+.sheet .tf input{background:var(--card3)}
+.inp.wide .tf input{text-align:center}
 .rng{display:flex;gap:6px;margin:0 0 6px}
 .rng button{border:0;background:var(--card2);color:var(--t2);border-radius:999px;height:30px;padding:0 12px;font-size:12.5px;font-weight:600}
 .rng button[aria-pressed=true]{background:var(--t1);color:#000}
@@ -1265,13 +1271,14 @@ function autoTok(t,k,ap,p){
   return null;
 }
 function tx(str){
-  var p=state.ui.prof||{},ap=autoProf();
+  var ap=autoProf(),p=effProf(ap);
   return str.replace(/\{([brs]):(\w+)\}/g,function(_,t,k){
     if(ap){var at=autoTok(t,k,ap,p);if(at)return at;}
     var z,o=[];
     if(t==='b'){
       z=BK[k];o.push(z[0],(z[1]?Math.round(z[1]*100)+'–':'< ')+Math.round(z[2]*100)+' % FTP');
       if(p.ftp)o.push('≈ '+(z[1]?Math.round(p.ftp*z[1])+'–':'< ')+Math.round(p.ftp*z[2])+' W');
+      else if(!ap&&k==='im'){var bi=declBikeIm();if(bi)o.push('≈ '+Math.round(bi)+' km/h');}
     }else if(t==='r'){
       z=RN[k];o.push(z[0],(z[1]?Math.round(z[1]*100)+'–':'< ')+Math.round(z[2]*100)+' % FC max');
       if(p.fc)o.push('≈ '+(z[1]?Math.round(p.fc*z[1])+'–':'< ')+Math.round(p.fc*z[2])+' bpm');
@@ -1435,6 +1442,7 @@ function openSheetByKey(k){
   else if(n==='legal')openLegal();
   else if(n==='away')openAwayList();
   else if(n==='acts')openAllActs();
+  else if(n==='level')openLevel();
   else if(n==='act')openActDetail(v);
   else if(n==='assoc')openPickSess(v);
   else if(n==='link')openPickAct(v);
@@ -1542,12 +1550,19 @@ function vHome(){
 function mrow(icon,t,sub,act,attrs){return '<button class="mrow" data-act="'+act+'" '+(attrs||'')+'><span class="mi">'+ic(icon,22)+'</span><span style="flex:1;min-width:0"><b>'+t+'</b><small>'+sub+'</small></span>'+ic('right',18)+'</button>';}
 function vMore(){
   return topbar(RNAME,'Plus',false)+
-    '<div class="menu">'+mrow('plan','25 semaines','Vue d’ensemble des blocs et des phases','tab','data-tab="plan"')+mrow('week','Vacances & week-ends',awayList().length?awayList().length+' période'+(awayList().length>1?'s':'')+' enregistrée'+(awayList().length>1?'s':''):'Alléger le plan pendant une absence','awaylist')+'</div>'+
-    '<div class="menu">'+mrow('gear','Réglages','Garmin, repères d’entraînement, sauvegarde','settings')+mrow('info','Mentions légales','Confidentialité, avertissement, crédits','legal')+mrow('share','Partager l’app','Envoie le lien à un ami qui prépare une course','shareapp')+'</div>'+
+    '<div class="menu">'+mrow('plan',NW+' semaines','Vue d’ensemble des blocs et des phases','tab','data-tab="plan"')+mrow('week','Vacances & week-ends',awayList().length?awayList().length+' période'+(awayList().length>1?'s':'')+' enregistrée'+(awayList().length>1?'s':''):'Alléger le plan pendant une absence','awaylist')+'</div>'+
+    '<div class="menu">'+mrow('chart','Mon niveau',lvAny()?'Questionnaire rempli · modifier mes temps de référence':'Estime tes allures sans Garmin (3 questions)','level')+mrow('gear','Réglages','Garmin, repères d’entraînement, sauvegarde','settings')+mrow('info','Mentions légales','Confidentialité, avertissement, crédits','legal')+mrow('share','Partager l’app','Envoie le lien à un ami qui prépare une course','shareapp')+'</div>'+
     '<p class="small muted" style="text-align:center;margin:18px 0 4px;line-height:1.6">'+esc(RNAME)+'<br>'+esc(fmtLong(RACE_DATE))+'<br>Plan de '+NW+' semaines · du '+fmtDay(PLAN_START)+' au '+fmtDay(RACE_DATE)+'</p>';
 }
 function autoSummary(){
-  var ap=autoProf();if(!ap)return ' (Synchronise Garmin pour les calculer.)';
+  var ap=autoProf();
+  if(!ap){
+    var dp=declProf(),bi=declBikeIm(),ds=[];
+    if(dp.thr)ds.push('seuil course ≈ '+mmss(dp.thr)+' /km');
+    if(bi)ds.push('vélo ≈ '+Math.round(bi)+' km/h');
+    if(dp.css)ds.push('CSS natation ≈ '+mmss(dp.css)+' /100 m');
+    return ds.length?'<br><b>Calculé d’après ton questionnaire :</b> '+ds.join(' · ')+'.':' (Synchronise Garmin pour les calculer, ou remplis le questionnaire de niveau.)';
+  }
   var hz=ap.hz,s='<br><b>Calculé aujourd’hui :</b> zone 2 = '+(hz[0]+1)+'–'+hz[1]+' bpm';
   if(ap.imRun)s+=' · allure '+(RL==='course'?'de course':RL+' course')+' ≈ '+mmss(ap.imRun)+' /km';
   if(ap.imBike)s+=' · vélo ≈ '+Math.round(ap.imBike)+' km/h';
@@ -1705,7 +1720,7 @@ function cloudKeys(code){
 function cloudBase(){return (state.ui&&state.ui.pubApi)||PUB_API;}
 function cloudPayload(){
   var u=state.ui||{};
-  return {app:'plan-triathlon',v:1,done:state.done,notes:state.notes,links:state.links,race:state.race||CFG,prof:u.prof||{},away:u.away||[],rc:u.race||{}};
+  return {app:'plan-triathlon',v:1,done:state.done,notes:state.notes,links:state.links,race:state.race||CFG,prof:u.prof||{},lv:u.lvl||{},away:u.away||[],rc:u.race||{}};
 }
 function cloudEncrypt(keys,obj){
   var iv=crypto.getRandomValues(new Uint8Array(12));
@@ -1749,7 +1764,7 @@ function cloudPush(loud){
 }
 function cloudApply(p){
   state.done=p.done||{};state.notes=p.notes||{};state.links=p.links||{};
-  state.ui.prof=p.prof||{};state.ui.away=p.away||[];state.ui.race=p.rc||{};
+  state.ui.prof=p.prof||{};state.ui.lvl=p.lv||{};state.ui.away=p.away||[];state.ui.race=p.rc||{};
   if(p.race&&p.race.date&&p.race.start)state.race=p.race;
 }
 // récupération (nouvel appareil ou restauration) : télécharge, déchiffre et remplace les données locales
@@ -2465,7 +2480,7 @@ function awayNote(s){
    Vitesses : celles calculées depuis tes activités Garmin (autoProf) ; à défaut, repères par défaut (ou seuil saisi pour la course). */
 var DEF_RUN={soft:430,z2:390,tempo:330,im:375},DEF_BIKE={soft:23,z2:26,ft:28,sw:30,im:28};
 function tokKmh(t,k){
-  var ap=autoProf(),p=state.ui.prof||{},hz=ap&&ap.hz,v=0;
+  var ap=autoProf(),p=effProf(ap),hz=ap&&ap.hz,v=0;
   if(t==='R'){
     var pace=0;
     if(ap&&k==='im'&&ap.imRun)pace=ap.imRun;
@@ -2483,6 +2498,7 @@ function tokKmh(t,k){
       if(fl&&ap.imBike)v=ap.imBike*fl;
       else if(ap.bikeAt){var z={soft:1,z2:2,ft:3,sw:4}[k];if(z===1)v=(ap.bikeAt(hz[0])||0)*0.95;else if(z){var sa=ap.bikeAt(hz[z-2]+1),sb=ap.bikeAt(hz[z-1]);if(sa&&sb)v=(sa+sb)/2;}}
     }
+    if(!v&&!ap&&k==='im')v=declBikeIm();
     return v||DEF_BIKE[k]||DEF_BIKE.z2;
   }
   return 0;
@@ -3040,6 +3056,9 @@ document.addEventListener('click',function(e){
   else if(a==='awaydel')delAway();
   else if(a==='svresync')svResync();
   else if(a==='settings')openSheet();
+  else if(a==='level')openLevel();
+  else if(a==='lvd'){var Lk=state.ui.lvl=state.ui.lvl||{},lk=Lk[d.k]=Lk[d.k]||{},was=lk.d>=21000;lk.d=+d.v;if(d.k==='run'&&was!==(lk.d>=21000)){lk.t=0;var tw=document.getElementById('lv-run-tw');if(tw)tw.innerHTML=lvRunTin();}save();lvRefresh();}
+  else if(a==='lvclear'){if(confirm('Effacer tes réponses au questionnaire de niveau ?')){state.ui.lvl={};save();closeSheet();render(true);toast('Questionnaire effacé');}}
   else if(a==='welcome')openWelcome();
   else if(a==='welcomeok'){state.ui.welcomed=true;save();closeSheet();}
   else if(a==='welcomegarmin'){state.ui.welcomed=true;save();openWiz(1);}
@@ -3058,6 +3077,7 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('change',function(e){
   var t=e.target;
+  if(t&&/^rc-goal-/.test(t.id||''))return;
   if(t&&/^rc-/.test(t.id||'')){
     var rp=state.ui.race=state.ui.race||{},k=t.id.slice(3),v=t.value.trim();
     if(k==='goal'){var g=parseHM(v);if(g)rp.goal=g;else delete rp.goal;}
@@ -3070,7 +3090,14 @@ document.addEventListener('change',function(e){
     f[t.id==='dfrom'?'from':'to']=t.value;f.m='custom';dsel=null;save();render(true);
   }
 });
+document.addEventListener('focusin',function(e){var t=e.target;if(t&&t.closest&&t.closest('.tin')){try{t.select();}catch(x){}}});
+document.addEventListener('keydown',function(e){
+  var t=e.target;if(e.key!=='Enter'||!t||!t.closest||!t.closest('.tin'))return;
+  e.preventDefault();var all=t.closest('.tin').querySelectorAll('input'),nx=all[Array.prototype.indexOf.call(all,t)+1];if(nx)nx.focus();else t.blur();
+});
 document.addEventListener('input',function(e){
+  if(e.target&&e.target.closest&&e.target.closest('.tin'))tinAdvance(e.target);
+  if(e.target&&/^rc-goal-(h|m)$/.test(e.target.id||'')){var gp=state.ui.race=state.ui.race||{},gt=tinRead('rc-goal');if(gt>0)gp.goal=gt;else delete gp.goal;save();safeRender();return;}
   if(e.target&&e.target.id==='wz-key'){var prev=wz.key||'';wz.key=e.target.value;if(!wz.busy&&wz.key.trim().length>=20&&prev.length<5){setTimeout(function(){if(wz.step===3&&!wz.busy&&!wz.res)wzVerify();},250);}return;}
   if(e.target&&e.target.id==='rf-q'&&raceDraft){
     var qd=raceDraft,qv=e.target.value;qd.q=qv;qd.cres=catSearch(qv);qd.rres=[];qd.rload=false;
@@ -3091,6 +3118,7 @@ document.addEventListener('input',function(e){
     }else{svs.key=sval;if(!svs.url)svs.url=PUB_API;}
     svs.t=0;save();return;
   }
+  if(e.target&&/^lv-/.test(e.target.id||'')){var lm=/^lv-(run|bike|swim)-(d|h|m|s)$/.exec(e.target.id);if(lm){if(lm[2]==='d')lvInput(lm[1],'d',e.target.value);else lvInput(lm[1],'t',lvRead(lm[1]));}return;}
   if(e.target&&/^pf-/.test(e.target.id||'')){
     var p=state.ui.prof=state.ui.prof||{},k=e.target.id.slice(3),v=e.target.value;
     p[k]=(k==='thr'||k==='css')?parseT(v):(parseInt(v,10)||0);
@@ -3136,7 +3164,7 @@ function openSheet(){
     foldHtml('garmin','bike','Connexion Garmin',linked?'Connecté · '+ago(state.sv.t):'Non configurée',svFoldHtml(),!linked)+
     foldHtml('send','share','Envoi vers la montre','Séances structurées via intervals.icu',pushSettings())+
     foldHtml('prof','gear','Mes repères d’entraînement','FTP, FC max, allures · calculés automatiquement',
-      '<p>Optionnel. Par défaut, l’app calcule tes zones et allures à partir de tes activités Garmin ; saisis une valeur seulement pour la forcer.'+autoSummary()+'</p>'+
+      '<p>Optionnel. Par défaut, l’app calcule tes zones et allures à partir de tes activités Garmin ; saisis une valeur seulement pour la forcer.'+autoSummary()+'</p><button class="btn" data-act="level" style="margin:0 0 12px">'+(lvAny()?'Modifier mon niveau (questionnaire)':'Sans Garmin : remplir le questionnaire de niveau')+'</button>'+
       '<label class="inp"><span>FTP vélo<small>watts (test 20 min × 0,95)</small></span><input id="pf-ftp" inputmode="numeric" placeholder="ex. 220" value="'+esc(pv('ftp'))+'"></label>'+
       '<label class="inp"><span>FC max<small>bpm</small></span><input id="pf-fc" inputmode="numeric" placeholder="ex. 185" value="'+esc(pv('fc'))+'"></label>'+
       '<label class="inp"><span>Allure seuil course<small>min:s par km (≈ 10 km)</small></span><input id="pf-thr" placeholder="ex. 4:50" value="'+esc(pv('thr'))+'"></label>'+
@@ -3173,7 +3201,7 @@ function closeSheet(){
   if(sheetDepth>0){var n=sheetDepth;sheetDepth=0;try{history.go(-n);}catch(e){}}
   else syncUrl(false);
 }
-function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,notes:state.notes,links:state.links,prof:state.ui.prof||{},away:state.ui.away||[],race:state.race||CFG});}
+function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,notes:state.notes,links:state.links,prof:state.ui.prof||{},lvl:state.ui.lvl||{},away:state.ui.away||[],race:state.race||CFG});}
 function doExport(){
   var txt=payload(),ta=document.getElementById('io');ta.value=txt;
   if(navigator.share){navigator.share({title:'Sauvegarde '+RNAME,text:txt}).catch(function(){});return;}
@@ -3185,11 +3213,124 @@ function doImport(){
   try{o=JSON.parse(ta.value);if(!o||o.app!=='ironman-sables-2027'||typeof o.done!=='object'||typeof o.notes!=='object')throw 0;}
   catch(e){toast('Sauvegarde invalide');return;}
   if(!confirm('Remplacer les données actuelles par cette sauvegarde ?'))return;
-  state.done=o.done||{};state.notes=o.notes||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
+  state.done=o.done||{};state.notes=o.notes||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.lvl)state.ui.lvl=o.lvl;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
 }
 function doReset(){
   if(!confirm('Effacer toutes les séances cochées et toutes les notes ? Cette action est définitive.'))return;
   state.done={};state.notes={};state.links={};state.ui.away=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
+}
+
+/* ---------- Niveau déclaré (sans historique Garmin) ----------
+   Petit questionnaire : un temps récent par discipline, à effort soutenu (course : 5 km, 10 km ou semi ; vélo : une sortie ; natation :
+   200 m à 1 500 m). Il sert de repli quand Garmin n'a pas assez de sorties : allures des séances (seuil course, CSS natation, vitesse
+   vélo) et estimation du temps de course. Les vraies sorties Garmin passent toujours avant, discipline par discipline.
+   Stockage : state.ui.lvl = {run:{d:mètres,t:secondes}, bike:{d:mètres,t:secondes}, swim:{d:mètres,t:secondes}}. */
+var LV_RUN=[[5000,'5 km'],[10000,'10 km'],[21097,'Semi']],LV_SWIM=[[200,'200 m'],[400,'400 m'],[1000,'1 000 m'],[1500,'1 500 m']];
+function lvGet(k){
+  var l=(state.ui.lvl||{})[k];if(!l||!(l.d>0)||!(l.t>0))return null;
+  var q=k==='run'?l.t/(l.d/1000):k==='swim'?l.t/l.d*100:l.d/l.t*3.6;
+  return (k==='bike'?(q>=8&&q<=50):k==='run'?(q>=150&&q<=600):(q>=50&&q<=300))?l:null;
+}
+function lvAny(){return !!(lvGet('run')||lvGet('bike')||lvGet('swim'));}
+function lvT(t){t=Math.round(t);return t>=3600?Math.floor(t/3600)+':'+('0'+Math.floor(t%3600/60)).slice(-2)+':'+('0'+t%60).slice(-2):mmss(t);}
+function lvTxt(k,l){return (l.d>=1000?fk(l.d)+' km':l.d+' m')+' en '+(k==='bike'?hms(l.t):lvT(l.t));}
+function lvPace(k,l){return k==='run'?mmss(l.t/(l.d/1000))+' /km':k==='swim'?mmss(l.t/l.d*100)+' /100 m':(l.d/l.t*3.6).toFixed(1).replace('.',',')+' km/h';}
+function riegel(l,D){return l.t*Math.pow(D/l.d,D>21200&&l.d<=21200?1.08:1.06);}
+// Temps de course d'une discipline d'après le questionnaire (mêmes pénalités et scénarios que l'estimation Garmin)
+function declRace(k,P,sc){
+  var l=lvGet(k);if(!l)return null;
+  var b0='d’après ton questionnaire ('+lvTxt(k,l)+')';
+  if(k==='swim')return {t:riegel(l,RACE.swimM)*1.05*(P.wet?0.97:1)*sc.sw,n:0,conf:'faible',basis:b0+', projeté sur '+fk(RACE.swimM)+' km, +5 % (eau libre, repérage)'+(P.wet?', −3 % combinaison':'')};
+  if(k==='run'){
+    var vr=Math.max(1000/510,Math.min(1000/270,RACE.runM/riegel(l,RACE.runM)));
+    return {t:RACE.runM/vr*sc.rn,n:0,conf:'faible',basis:b0+', projeté sur '+RUNLBL+' ; allure ralentie de '+Math.round((sc.rn-1)*100)+' % (fatigue du vélo, ravitaillements)'};
+  }
+  var v=l.d/l.t*3.6*Math.max(0.82,Math.min(1.08,Math.pow(l.d/RACE.bikeM,0.06)));
+  v=Math.max(14,Math.min(40,v))*sc.bk;
+  return {t:RACE.bikeM/(v/3.6)*(1+0.03*FF)+240*FF,n:0,conf:'faible',basis:b0+', projeté sur '+fk(RACE.bikeM)+' km'+(FF>=0.5?' ; +'+Math.round(3*FF*10)/10+' % d’endurance, '+Math.round(4*FF)+' min d’arrêts':'')};
+}
+// Repères d'allure déduits du questionnaire : seuil course (≈ 10 km) et CSS natation (≈ 1 500 m), au format des repères saisis à la main
+var DPc={k:'',v:{}};
+function declProf(){
+  var k=JSON.stringify(state.ui.lvl||{});if(DPc.k===k)return DPc.v;
+  var o={},r=lvGet('run'),s=lvGet('swim');
+  if(r)o.thr=Math.round(riegel(r,10000)/10);
+  if(s)o.css=Math.round(riegel(s,1500)/15);
+  DPc={k:k,v:o};return o;
+}
+function effProf(ap){var p=state.ui.prof||{};return ap?p:Object.assign({},declProf(),p);}   // repères saisis > Garmin > questionnaire
+function declBikeIm(){var d=declRace('bike',raceParams(),RSCEN.real);return d?RACE.bikeM/d.t*3.6:0;}
+function lvOut(){
+  var P=raceParams(),sc=RSCEN.real,r=declRace('run',P,sc),b=declRace('bike',P,sc),s=declRace('swim',P,sc),rows=[];
+  if(s)rows.push(['swim','Natation',paceOf('swim',s.t),s.t]);
+  if(b)rows.push(['bike','Vélo',paceOf('bike',b.t),b.t]);
+  if(r)rows.push(['run','Course à pied',paceOf('run',r.t),r.t]);
+  if(!rows.length)return '<p class="small muted" style="margin:0">Remplis au moins une discipline pour voir ce que l’app en déduit.</p>';
+  var h=rows.map(function(x){return '<div class="spr sp-'+x[0]+'"><div class="ico">'+ic(x[0],20)+'</div><div class="bd"><div class="pr-h" style="margin:0"><b>'+x[1]+'</b><span>'+x[2]+' · '+hms(x[3])+'</span></div></div></div>';}).join('');
+  if(r&&b&&s)h+='<p class="small muted" style="margin:10px 0 0">Temps de course estimé (scénario réaliste, transitions comprises) : <b style="color:var(--t1)">'+hms(s.t+b.t+r.t+P.t1*60+P.t2*60)+'</b>.</p>';
+  else h+='<p class="small muted" style="margin:10px 0 0">Remplis les trois disciplines pour obtenir un temps de course total.</p>';
+  return h;
+}
+function lvChips(k,list){
+  var l=(state.ui.lvl||{})[k]||{};
+  return '<div class="rng" role="group" aria-label="Distance de référence">'+list.map(function(x){return '<button data-act="lvd" data-k="'+k+'" data-v="'+x[0]+'" aria-pressed="'+(l.d===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>';
+}
+// Durée : cases numériques séparées (h / min / s), claviers de téléphone sans « : ». Ids : <préfixe>-h, -m, -s.
+function tinHtml(idp,label,hint,t,parts,ph){
+  var hasH=parts.indexOf('h')>=0,hasS=parts.indexOf('s')>=0,U={h:'h',m:'min',s:'s'},A={h:'heures',m:'minutes',s:'secondes'},val={h:'',m:'',s:''};
+  if(t>0){val.h=hasH&&t>=3600?String(Math.floor(t/3600)):'';val.m=String(hasH?Math.floor(t%3600/60):Math.floor(t/60));val.s=hasS?('0'+t%60).slice(-2):'';}
+  if(hasH&&t>0&&t<3600)val.h='0';
+  return '<div class="inp wide"><span>'+label+'<small>'+hint+'</small></span><div class="tin" role="group" aria-label="'+label+'">'+parts.map(function(f){
+    var goal=idp==='rc-goal';
+    return '<div class="tf"><input id="'+idp+'-'+f+'" type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" autocomplete="off" maxlength="'+(f==='h'&&!goal?1:2)+'"'+(goal&&f==='h'?' data-ah="1"':'')+' placeholder="'+ph[f]+'" aria-label="'+A[f]+'" value="'+val[f]+'"><span>'+U[f]+'</span></div>';
+  }).join('')+'</div></div>';
+}
+function tinRead(idp){
+  var g=function(f){var el=document.getElementById(idp+'-'+f);return el?parseInt(el.value,10)||0:0;},hasH=!!document.getElementById(idp+'-h');
+  return g('h')*3600+(hasH?Math.min(59,g('m')):g('m'))*60+Math.min(59,g('s'));
+}
+function tinAdvance(el){
+  var v=el.value,ml=el.maxLength>0?el.maxLength:2;
+  if(!(v.length>=ml||(el.getAttribute('data-ah')&&v.length===1&&+v>=3)))return;
+  var all=el.closest('.tin').querySelectorAll('input'),nx=all[Array.prototype.indexOf.call(all,el)+1];
+  if(nx)nx.focus();
+}
+function lvTin(k,label,hint,parts){
+  var l=(state.ui.lvl||{})[k];
+  return tinHtml('lv-'+k,label,hint,l&&l.t>0?l.t:0,parts,{h:'0',m:k==='run'?'25':k==='bike'?'30':'7',s:'00'});
+}
+function lvRunTin(){
+  var semi=((state.ui.lvl||{}).run||{}).d>=21000;
+  return lvTin('run','Ton temps',semi?'heures, minutes et secondes':'minutes et secondes',semi?['h','m','s']:['m','s']);
+}
+function lvRead(k){return tinRead('lv-'+k);}
+function openLevel(){
+  var L=state.ui.lvl||{},bk=L.bike||{},h='';
+  h+='<p class="small muted" style="margin:0 0 16px">Pas de Garmin, ou pas assez de sorties ? Donne un temps récent sur chaque discipline (effort soutenu, pas un sprint). Tout est facultatif. L’app en déduit tes allures et une estimation de ton temps de course. Tes vraies sorties Garmin les remplacent dès qu’il y en a assez.</p>';
+  h+='<div class="rsec"><div class="eyebrow">Course à pied</div>'+lvChips('run',LV_RUN)+'<div id="lv-run-tw">'+lvRunTin()+'</div><div class="small muted" id="lv-run-o"></div></div>';
+  h+='<div class="rsec"><div class="eyebrow">Vélo</div><label class="inp"><span>Distance d’une sortie récente<small>km, à rythme soutenu mais tenable</small></span><input id="lv-bike-d" inputmode="decimal" autocomplete="off" placeholder="40" value="'+(bk.d>0?esc(String(bk.d/1000).replace('.',',')):'')+'"></label>'+lvTin('bike','Durée','heures et minutes',['h','m'])+'<div class="small muted" id="lv-bike-o"></div></div>';
+  h+='<div class="rsec"><div class="eyebrow">Natation</div>'+lvChips('swim',LV_SWIM)+''+lvTin('swim','Ton temps','minutes et secondes, en bassin sans pause',['m','s'])+'<div class="small muted" id="lv-swim-o"></div></div>';
+  h+='<div class="rsec"><div class="eyebrow">Ce que l’app en déduit</div><div id="lv-out"></div></div>';
+  h+='<div class="btns"><button class="btn pri" data-act="closesheet">Terminé</button><button class="btn" data-act="lvclear">Tout effacer</button></div>';
+  showSheet('Mon niveau','Estime tes allures sans Garmin',h);sheetRoute('level');
+  lvRefresh(true);
+}
+function lvRefresh(noRender){
+  var L=state.ui.lvl||{};
+  ['run','bike','swim'].forEach(function(k){
+    var l=L[k],ok=lvGet(k),el=document.getElementById('lv-'+k+'-o');
+    if(el)el.textContent=ok?'≈ '+lvPace(k,ok):(l&&l.d>0&&l.t>0?'Valeur peu probable : vérifie le temps et la distance.':'');
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-act=lvd]'),function(b){var l=L[b.getAttribute('data-k')];b.setAttribute('aria-pressed',String(!!l&&l.d===+b.getAttribute('data-v')));});
+  var o=document.getElementById('lv-out');if(o)o.innerHTML=lvOut();
+  if(!noRender)render(true);
+}
+function lvInput(k,f,v){
+  var L=state.ui.lvl=state.ui.lvl||{},l=L[k]=L[k]||{};
+  if(k==='bike'){if(f==='d'){var n=parseFloat(String(v).replace(',','.'));l.d=n>0?Math.round(n*1000):0;}else l.t=v;}
+  else{if(!l.d)l.d=k==='run'?5000:400;l.t=v;}
+  if(!(l.d>0)&&!(l.t>0))delete L[k];
+  save();lvRefresh();
 }
 
 /* ---------- Estimation du temps de course (IRONMAN full distance) ----------
@@ -3263,6 +3404,7 @@ function estRace(all,P,cut){
     var rt=RACE.runM/vr*sc.rn;
     out.run={t:rt,n:rr.length,conf:goodR&&rr.length>=15&&fr.r2>=0.35?'bonne':rr.length>=8?'moyenne':'faible',basis:basisR+' ; allure ralentie de '+Math.round((sc.rn-1)*100)+' % (fatigue du vélo, ravitaillements)'};
   }
+  if(cut===null||cut===undefined)['swim','bike','run'].forEach(function(k){if(!out[k]){var dk=declRace(k,P,sc);if(dk)out[k]=dk;}});
   out.t1=P.t1*60;out.t2=P.t2*60;
   out.total=out.swim&&out.bike&&out.run?out.swim.t+out.bike.t+out.run.t+out.t1+out.t2:null;
   return out;
@@ -3304,10 +3446,10 @@ function raceNeeds(all){
 }
 function vRace(){
   var all=dataActs(),sv=state.sv,P=raceParams(),h='',st=status();
-  if(!(sv.url&&sv.key)||!all.length)return emptyState('race','Estime ton temps de course','Elle s’appuie sur tes vraies sorties Garmin (natation, vélo, course) et sur le parcours '+(IS_SABLES?'des Sables d’Olonne':'de ta course')+'. Connecte Garmin pour la calculer.','','<button class="btn pri" data-act="garminwiz">Connecter Garmin</button>');
+  if((!(sv.url&&sv.key)||!all.length)&&!lvAny())return emptyState('race','Estime ton temps de course','Elle s’appuie sur tes vraies sorties Garmin (natation, vélo, course) et sur le parcours '+(IS_SABLES?'des Sables d’Olonne':'de ta course')+'. Connecte Garmin pour la calculer, ou réponds à 3 questions rapides.','','<button class="btn pri" data-act="garminwiz">Connecter Garmin</button><button class="btn" data-act="level" style="margin-top:8px">Estimer avec un questionnaire</button>');
   var E=estAll(all,P,null),cur=E[P.scen],rd=diffDays(RACE_DATE,today());
   if(!cur.total){
-    return emptyState('race','Estimation bientôt disponible','Il manque quelques sorties récentes (sur les 26 dernières semaines) pour estimer ton temps de course avec fiabilité.',raceNeeds(all),'');
+    return emptyState('race','Estimation bientôt disponible','Il manque quelques sorties récentes (sur les 26 dernières semaines) pour estimer ton temps de course avec fiabilité.',raceNeeds(all),'<button class="btn" data-act="level" style="margin-top:8px">Compléter avec le questionnaire</button>');
   }
   var SCN_HINT={prud:'Scénario prudent : une journée plus difficile que prévu.',real:'Scénario réaliste : ton niveau actuel, un jour normal.',ambi:'Scénario ambitieux : tout se passe bien, tu es en grande forme.'};
   var CONFW={bonne:0,moyenne:1,faible:2},CONFT=['fiable','correcte','à confirmer'];
@@ -3318,7 +3460,7 @@ function vRace(){
     '<div class="scn" role="group" aria-label="Choisis un scénario">'+['ambi','real','prud'].map(function(k){return '<button data-act="rcscen" data-v="'+k+'" aria-pressed="'+(P.scen===k)+'"><span>'+RSCEN[k].n+'</span><b>'+hms(E[k].total)+'</b></button>';}).join('')+'</div>'+
     '<div class="rmeta">'+(rd>0?'<b>J-'+rd+'</b> · ':'')+esc(RNAME)+' · '+fmtDay(RACE_DATE)+' '+RACE_DATE.getFullYear()+
     (margin!==null?'<br>'+(margin>=0?'Marge sur la limite de '+String(RACE.cutoff/3600).replace('.',',')+' h : <b>'+hms(margin)+'</b>':'<span class="warn">Au-dessus de la limite de '+String(RACE.cutoff/3600).replace('.',',')+' h : à travailler.</span>'):'')+
-    '<br>Fiabilité de l’estimation : <b>'+CONFT[worst]+'</b>'+(worst>0?' (plus tu enregistres de sorties, plus elle s’affine)':'')+'</div></section>';
+    '<br>Fiabilité de l’estimation : <b>'+CONFT[worst]+'</b>'+(worst>0?' (plus tu enregistres de sorties, plus elle s’affine)':'')+(['swim','bike','run'].some(function(k){return cur[k]&&cur[k].n===0;})?'<br>En partie basée sur ton questionnaire de niveau : les sorties Garmin l’affineront.':'')+'</div></section>';
   // 2. Détail par discipline
   var tot=cur.total,parts=[['swim','Natation',fk(RACE.swimM)+' km',cur.swim],['bike','Vélo',fk(RACE.bikeM)+' km',cur.bike],['run','Course à pied',RUNLBL,cur.run]];
   var bars='<div class="zbar" role="img" aria-label="Répartition du temps de course">'+[['swim',cur.swim],['t1',{t:cur.t1}],['bike',cur.bike],['t2',{t:cur.t2}],['run',cur.run]].map(function(p){return '<span style="flex:'+p[1].t+';background:'+(p[0]==='t1'||p[0]==='t2'?'#48484a':SPCOL[p[0]])+'"></span>';}).join('')+'</div>';
@@ -3332,7 +3474,7 @@ function vRace(){
   h+='<section class="card"><div class="dtitle"><h2>Détail par discipline</h2></div><p class="dsub">Scénario '+RSCEN[P.scen].n.toLowerCase()+', transitions comprises ('+Math.round(cur.t1/60)+' + '+Math.round(cur.t2/60)+' min).</p>'+bars+'<div style="height:12px"></div>'+rows+
     mfold('rbasis','Comment c’est calculé','<p class="basis">Estimation indicative, sans capteur de puissance : elle repose sur ta fréquence cardiaque et tes sorties récentes (les plus récentes comptent davantage), appliquées au parcours de ta course.</p>'+basis)+'</section>';
   // 3. Ton objectif
-  var goalIn=rcIn('goal','Ton objectif de temps','h:mm (optionnel)',P.goal?hms(P.goal).replace(' h ',':'):'',({full:'13:30',half:'5:30',olympic:'2:30',sprint:'1:20'})[FCLS]);
+  var gph=({full:'13:30',half:'5:30',olympic:'2:30',sprint:'1:20'})[FCLS].split(':'),goalIn=tinHtml('rc-goal','Ton objectif de temps','heures et minutes (facultatif)',P.goal||0,['h','m'],{h:gph[0],m:gph[1]});
   if(P.goal){
     var core=cur.swim.t+cur.bike.t+cur.run.t,f=(P.goal-cur.t1-cur.t2)/core,gap=cur.total-P.goal;
     h+='<section class="card dsum"><div class="eyebrow">Ton objectif · '+hms(P.goal)+'</div>'+(gap>0?'<div class="dbig">'+gapTxt(gap)+'<small>à gagner</small></div>':'<div class="dbig" style="color:#30d158">Atteignable<small>'+gapTxt(gap)+' d’avance</small></div>')+bar(Math.min(100,Math.round(Math.min(P.goal,cur.total)/Math.max(P.goal,cur.total)*100)))+
@@ -3343,7 +3485,7 @@ function vRace(){
   }
   // 4. Évolution de l'estimation
   var pts=[],first=Infinity,i;
-  all.forEach(function(a){first=Math.min(first,dayIdx(a));});
+  if(all.length)all.forEach(function(a){first=Math.min(first,dayIdx(a));});
   var t0=today(),cur0=new Date(t0.getFullYear(),t0.getMonth(),1);
   var fd=addDays(PLAN_START,first),m0=new Date(fd.getFullYear(),fd.getMonth()+3,1);
   for(var mm=new Date(m0);mm<=cur0;mm=new Date(mm.getFullYear(),mm.getMonth()+1,1)){
@@ -3361,7 +3503,7 @@ function vRace(){
       rcIn('bikeUp','Dénivelé vélo','D+ total (m)',P.bikeUp,String(CFG.bikeUp||'ex. 800'))+rcIn('runUp','Dénivelé course','D+ total (m)',P.runUp,String(CFG.runUp||'ex. 150'))+
       rcIn('hrB','FC visée à vélo','bpm',P.hrB,String(P.hrB))+rcIn('hrR','FC visée en course','bpm',P.hrR,String(P.hrR))+
       rcIn('t1','Transition T1 (natation → vélo)','minutes',P.t1,String(({sprint:2,olympic:3,half:5,full:6})[FCLS]))+rcIn('t2','Transition T2 (vélo → course)','minutes',P.t2,String(({sprint:1,olympic:2,half:3,full:4})[FCLS]))+
-      '<div class="row" style="margin-top:6px"><div style="flex:1"><b style="font-size:14.5px">Combinaison de natation</b><div class="small muted">−3 % sur la natation (eau froide)</div></div><button class="chip'+(P.wet?' hl':'')+'" style="border:0;min-height:36px;padding:0 16px" data-act="rcwet" aria-pressed="'+P.wet+'">'+(P.wet?'Oui':'Non')+'</button></div>')+'</section>';
+      '<div class="row" style="margin-top:6px"><div style="flex:1"><b style="font-size:14.5px">Combinaison de natation</b><div class="small muted">−3 % sur la natation (eau froide)</div></div><button class="chip'+(P.wet?' hl':'')+'" style="border:0;min-height:36px;padding:0 16px" data-act="rcwet" aria-pressed="'+P.wet+'">'+(P.wet?'Oui':'Non')+'</button></div>')+'<button class="btn" data-act="level" style="margin-top:10px">'+(lvAny()?'Modifier mon niveau (questionnaire)':'Renseigner mon niveau (questionnaire)')+'</button></section>';
   // parcours
   h+=IS_SABLES?'<section class="card"><h2>Le parcours</h2><ul class="small muted" style="margin:0;padding-left:18px;line-height:1.6"><li>Natation : <b style="color:var(--t1)">3,8 km</b>, dans le chenal et l’océan.</li><li>Vélo : <b style="color:var(--t1)">178 km</b> pour <b style="color:var(--t1)">1 334 m de D+</b> (≈ 7,5 m/km, parcours vallonné).</li><li>Course à pied : <b style="color:var(--t1)">marathon (42,195 km)</b> avec <b style="color:var(--t1)">200 m de D+</b> (≈ 4,7 m/km, quasi plat).</li><li>Départ annoncé le '+fmtDay(RACE_DATE)+' '+RACE_DATE.getFullYear()+' à 7 h (source non officielle). Limite de temps : 17 h est la limite habituelle des IRONMAN, à confirmer pour cette course.</li></ul></section>':parcoursGen(P);
   return h;
@@ -3952,10 +4094,10 @@ try{
   if(SETUP&&!gateNeeded())track('setup_view');else if(!SETUP){loadAdminStats();if(acct())acctBoot();else cloudBoot();}
 }catch(e){}
 try{document.title='Plan triathlon · '+RNAME;}catch(e){}
+var r0=parseRoute();   // à lire avant le premier rendu, qui réécrit l'adresse
 render(false);
 if(!SETUP){
-  var r0=parseRoute();
-  if(r0.p.s&&!gateNeeded()){routing=true;try{openSheetByKey(r0.p.s);}finally{routing=false;}}
+  if(r0.p.s&&!gateNeeded()){routing=true;try{openSheetByKey(r0.p.s);}finally{routing=false;}syncUrl(false);}
   if(state.ui.welcomed===undefined){
     if(state.sv.url||Object.keys(state.done).length)state.ui.welcomed=true;
     else setTimeout(openWelcome,350);

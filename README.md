@@ -8,6 +8,7 @@ Application web (PWA) de plan d'entraînement triathlon sur mesure. On choisit s
 - **Plan sur mesure** : phases (Fondation, Développement, Spécifique, Affûtage), blocs de 3 semaines de charge + 1 de décharge, séances détaillées (zones, allures, conseils).
 - **Suivi** : séances cochées à la main ou automatiquement depuis Garmin, notes de la semaine, données et estimation du temps de course.
 - **Garmin** : les activités arrivent via intervals.icu et cochent les séances ; envoi possible des séances structurées vers la montre.
+- **Questionnaire de niveau** (menu Plus → Mon niveau) : sans Garmin, ou avec peu de sorties, un temps récent par discipline (5 km / 10 km / semi, une sortie vélo, 200 m à 1 500 m de natation) suffit pour déduire les allures des séances et estimer le temps de course. Les sorties Garmin passent toujours avant, discipline par discipline.
 - **Vacances et week-ends** : le plan est allégé ou déplacé pendant une absence.
 - **Compte Google** : le plan est enregistré sur l'appareil et dans le compte.
 - **Hors ligne** : installable sur l'écran d'accueil, fonctionne sans réseau.
