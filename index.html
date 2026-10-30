@@ -286,6 +286,14 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .csig i.sg-ok{background:#30d158}.csig i.sg-warn{background:#ffd60a}.csig i.sg-bad{background:#ff5e4e}
 .csig b{margin-left:auto;font-weight:600;font-size:13px;color:var(--t2);text-align:right}
 .zn{color:var(--t3);font-size:12px}
+.ef-t{display:flex;align-items:baseline;gap:8px}
+.ef-t b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ef-t span{font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
+.ef-bar{position:relative;height:6px;margin-top:10px;border-radius:3px;background:linear-gradient(90deg,#30d158,#ffd60a 45%,#ff9f0a 70%,#ff5e4e)}
+.ef-bar i{position:absolute;top:-4px;width:6px;height:14px;margin-left:-3px;border-radius:3px;background:#fff;box-shadow:0 0 0 2px #1f1f23}
+.ef-hr{display:flex;justify-content:space-between;gap:10px;margin-top:12px;padding-top:12px;border-top:.5px solid var(--sep);font-size:13.5px;color:var(--t2)}
+.ef-hr b{color:var(--t1);font-weight:600;text-align:right}
+.ad-v{font-size:12.5px;font-weight:700}
 .plan-note{margin:12px 0 0;font-size:13px;color:var(--t2)}
 .phd{border-top:.5px solid var(--sep)}
 .phd:first-of-type{border-top:0}
@@ -3898,7 +3906,7 @@ function weekReadout(agg,w){
   if(!o||!o.n)return t+' · aucune activité';
   var dist=dMetric()==='dist',p=[];['swim','bike','run','str','oth'].forEach(function(k){if(dist?o.dm[k]>0:o[k]>0)p.push(SPLBL[k].split(' ')[0]+' '+(dist?km(o.dm[k])+' km':fmtSec(o[k])));});
   var main=dist?km(o.msum)+' km':fmtSec(o.sec),other=dist?fmtSec(o.sec):(o.msum>0?km(o.msum)+' km':'');
-  return t+' · <b>'+main+'</b>'+(other?' · '+other:'')+' · '+o.n+' séance'+(o.n>1?'s':'')+(o.l?' · charge '+o.l:'')+'<br>'+p.join(' · ');
+  return t+' · <b>'+main+'</b>'+(other?' · '+other:'')+' · '+o.n+' séance'+(o.n>1?'s':'')+'<br>'+p.join(' · ');
 }
 // intervals.icu découpe souvent en 7 zones : on affiche les 5 zones habituelles, en regroupant tout ce qui dépasse le seuil
 function zonesHtml(zt,hz,compact){
@@ -4192,29 +4200,43 @@ function detMore(a,j){
   return h||'<p class="small muted">Pas de détail supplémentaire pour cette activité.</p>';
 }
 function adHero(a,k){
-  var big=[['Durée',fh(Math.round(a.d/60)),'']],p;
+  var dm=Math.round(a.d/60),big=[['Durée',Math.floor(dm/60)+'h'+('0'+dm%60).slice(-2),'']],p;
   if(a.m>0)big.push(['Distance',km(a.m),'km']);
   if(k==='run'||k==='swim'||k==='bike'){p=paceTxt(k,a.m,a.d);var q=p.indexOf(' ');big.push([k==='bike'?'Vitesse moy.':'Allure moy.',q>0?p.slice(0,q):p,q>0?p.slice(q+1):'']);}
   return '<div class="ad-hero sp-'+(k==='oth'?'str':k)+'">'+big.map(function(b){return '<div><span class="kl">'+b[0]+'</span><b>'+b[1]+(b[2]?'<small>'+b[2]+'</small>':'')+'</b></div>';}).join('')+'</div>';
 }
+// « Charge » d'intervals.icu, traduite : niveau, repère et comparaison à tes propres séances de la même discipline
+function effortCard(a,k){
+  var lvl=null,cmp='',zh=zonesHtml(a.zt,state.sv.hrz,true),hr='';
+  if(a.l>0){
+    lvl=a.l<40?['Léger','#30d158']:a.l<90?['Modéré','#7fdc9b']:a.l<160?['Soutenu','#ffd60a']:a.l<250?['Dur','#ff9f0a']:['Très dur','#ff5e4e'];
+    var same=dataActs().filter(function(x){return skey(x)===k&&x.l>0;});
+    if(same.length>=5&&SPLBL[k]&&k!=='oth'){var below=same.filter(function(x){return x.l<a.l;}).length;cmp='Plus exigeante que <b>'+pct(below,same.length)+' %</b> de tes séances de '+SPLBL[k].toLowerCase()+'.';}
+  }
+  if(a.h)hr='<div class="ef-hr"><span>Fréquence cardiaque</span><b>'+a.h+' bpm en moyenne'+(a.x?' · '+a.x+' max':'')+'</b></div>';
+  if(!lvl&&!hr&&!zh)return '';
+  var h='<div class="card ad-ch"><div class="dh"><span>Effort</span></div>';
+  if(lvl){
+    h+='<div class="ef-t"><b style="color:'+lvl[1]+'">'+lvl[0]+'</b><span>'+a.l+' points</span></div>'+
+      '<div class="ef-bar" role="img" aria-label="Niveau d’effort : '+lvl[0]+'"><i style="left:'+Math.min(100,a.l/3)+'%"></i></div>'+
+      '<p class="small muted" style="margin:8px 0 0">'+(cmp?cmp+' ':'')+'Repère : 100 points ≈ 1 h à ton seuil.</p>';
+  }
+  return h+hr+(zh?'<div style="margin-top:12px">'+zh+'</div>':'')+'</div>';
+}
 function actDetailBody(a){
   var k=skey(a),sid=LK.a2s[a.id],s=sid&&SBY[sid],h=adHero(a,k),t='';
-  if(a.h)t+=actKpi('FC moyenne',a.h+' bpm');
-  if(a.x)t+=actKpi('FC max',a.x+' bpm');
+  if(s){
+    var pr=k==='swim'&&s.m?Math.round(a.m/s.m*100):Math.round(a.d/60/Math.max(1,s.min)*100),vd=pr<80?['Plus court que prévu','#ff9f0a']:pr>120?['Plus long que prévu','#ff9f0a']:['Conforme au plan','#30d158'];
+    h+='<div class="act ad-plan sp-'+(k==='oth'?'str':k)+'"><div class="row"><b>Séance du plan</b><span class="sp"></span><span class="ad-v" style="color:'+vd[1]+'">'+vd[0]+'</span></div><div class="an">'+esc(s.title)+'</div><div class="small muted" style="margin-bottom:8px">'+esc(sessLabel(s))+' · prévu '+fh(s.min)+(s.m?' · '+km(s.m)+' km':'')+' · réalisé <b style="color:var(--t1)">'+pr+' %</b></div>'+bar(Math.min(100,pr),SPCOL[k]||null)+'</div>';
+  }
   if(a.z>0&&k!=='swim')t+=actKpi('Dénivelé +',a.z+' m');
-  if(a.c>0)t+=actKpi('Cadence',k==='run'?Math.round(a.c*2)+' spm':k==='swim'?Math.round(a.c)+' mvt/min':Math.round(a.c)+' tr/min');
+  if(a.c>0)t+=actKpi('Cadence',k==='run'?Math.round(a.c*2)+' pas/min':k==='swim'?Math.round(a.c)+' mvt/min':Math.round(a.c)+' tr/min');
   if(a.w)t+=actKpi('Puissance',a.w+' W');
   if(a.k)t+=actKpi('Calories',a.k+' kcal');
-  if(a.l)t+=actKpi('Charge',a.l);
-  if(a.e>a.d+60)t+=actKpi('Temps écoulé',fh(Math.round(a.e/60)));
-  if(t)h+='<div class="kpis">'+t+'</div>';
-  if(s){
-    var pr=k==='swim'&&s.m?Math.round(a.m/s.m*100):Math.round(a.d/60/Math.max(1,s.min)*100);
-    h+='<div class="act ad-plan sp-'+(k==='oth'?'str':k)+'"><b>Séance du plan</b><div class="an">'+esc(s.title)+'</div><div class="small muted" style="margin-bottom:8px">'+esc(sessLabel(s))+' · prévu '+fh(s.min)+(s.m?' · '+km(s.m)+' km':'')+' · réalisé <b style="color:var(--t1)">'+pr+' %</b></div>'+bar(Math.min(100,pr),SPCOL[k]||null)+'</div>';
-  }
-  var zh=zonesHtml(a.zt,state.sv.hrz,true);
-  if(zh)h+='<div class="card ad-ch"><div class="dh"><span>Zones de fréquence cardiaque</span></div>'+zh+'</div>';
+  if(a.e>a.d+60)t+=actKpi('Pauses',fmtSec(a.e-a.d));
+  if(t)h+='<div class="kpis" style="grid-template-columns:repeat(2,1fr)">'+t+'</div>';
   h+='<div id="det-more">'+(detCache[a.id]?detMore(a,detCache[a.id]):'<div class="skel" aria-label="Chargement du détail"><i></i><i></i></div>')+'</div>';
+  h+=effortCard(a,k);
   if(dayIdx(a)>=0&&actSport(a))h+='<button class="btn" data-act="picksess" data-aid="'+esc(a.id)+'">'+(s?'Changer la séance associée':'Associer à une séance du plan')+'</button>';
   return h;
 }
