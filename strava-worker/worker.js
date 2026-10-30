@@ -268,7 +268,7 @@ async function pubSync(req, url, env) {
 /* ---------- Statistiques d'usage anonymes ----------
    Compteurs agrégés par jour dans D1 (table ev : jour, nom d'événement, propriété, total). Aucun identifiant, aucune adresse IP, aucun cookie :
    on ne peut pas retrouver une personne. Événements acceptés : liste blanche ci-dessous ; propriétés tronquées. Lecture : GET /api/admin/stats (clé propriétaire). */
-const EVENTS = new Set(['gate_view', 'login', 'account_deleted', 'cloud_enabled', 'cloud_restore', 'open', 'install', 'setup_view', 'plan_created', 'plan_changed', 'race_pick', 'search_miss', 'garmin_connected']);
+const EVENTS = new Set(['wiz_start', 'wiz_error', 'gate_view', 'login', 'account_deleted', 'cloud_enabled', 'cloud_restore', 'open', 'install', 'setup_view', 'plan_created', 'plan_changed', 'race_pick', 'search_miss', 'garmin_connected']);
 async function pubEvent(req, env) {
   if (!env.DB) return json({ ok: false }, 200);
   let b = null;
