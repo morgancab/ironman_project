@@ -683,7 +683,22 @@ body.setup #view{padding-bottom:40px}
 /* =====================================================================
    1. CONSTANTES & OUTILS
    ===================================================================== */
-var KEY='ironman-sables-2027:v1';
+/* Profil de test : uniquement en local (localhost, 127.0.0.1, fichier). http://localhost:8080/?profil=nom ouvre un espace
+   isolé (stockage séparé, sans connexion Google, sans statistiques ni synchronisation). Voir DEV.md. Ignoré partout ailleurs. */
+var DEV=(function(){
+  if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)&&!/^file:/.test(location.protocol))return '';
+  var m=/[?&]profil=([\w-]{1,24})(?:&|$)/.exec(location.search||'');
+  return m?m[1]:'';
+})();
+var KEY='ironman-sables-2027:v1'+(DEV?':dev-'+DEV:'');
+if(DEV){
+  try{
+    if(/[?&]reset=1(?:&|$)/.test(location.search)){                          // ?profil=nom&reset=1 : repart de zéro puis retire le paramètre
+      localStorage.removeItem(KEY);
+      history.replaceState(null,'',location.href.replace(/([?&])reset=1&?/,'$1').replace(/[?&]$/,''));
+    }
+  }catch(e){}
+}
 var DAY=864e5;
 /* ---------- La course : format, date, distances ----------
    Tout le plan se déduit de cette configuration (state.race, créée à l'écran de démarrage).
@@ -702,7 +717,7 @@ function fmtClass(c){
   return c.bikeM<30000?'sprint':c.bikeM<65000?'olympic':c.bikeM<135000?'half':'full';
 }
 function loadRaceCfg(){
-  var s=null;try{s=JSON.parse(localStorage.getItem('ironman-sables-2027:v1'));}catch(e){}
+  var s=null;try{s=JSON.parse(localStorage.getItem(KEY));}catch(e){}
   if(s&&s.race&&s.race.date&&s.race.start)return {cfg:s.race,fresh:false};
   var used=s&&((s.done&&Object.keys(s.done).length)||(s.notes&&Object.keys(s.notes).length)||(s.sv&&s.sv.url)||(s.ui&&(s.ui.tab||s.ui.welcomed||s.ui.dflt||s.ui.prof)));
   return {cfg:SABLES,fresh:!used,migrate:!!used};
@@ -1710,12 +1725,14 @@ var cloudTimer=null,cloudBusy=false,cloudDraftCode=null;
 function cloudCfg(){return state.ui&&state.ui.cloud;}
 function save0(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
 function cloudSchedule(){
+  if(DEV)return;
   if(acct()){acctSchedule();return;}
   if(!cloudCfg()||cloudCfg().paused)return;
   clearTimeout(cloudTimer);cloudTimer=setTimeout(function(){cloudPush(false);},20000);
 }
 // envoi : seulement si les données ont changé depuis la dernière sauvegarde
 function cloudPush(loud){
+  if(DEV)return Promise.resolve();
   var c=cloudCfg();if(!c||cloudBusy)return Promise.resolve();
   var payload=cloudPayload(),sig=JSON.stringify(payload);
   if(!loud&&sig===c.sig)return Promise.resolve();
@@ -1880,7 +1897,7 @@ function svFoldHtml(){
 }
 var pubCfg=null,acctTimer=null,acctBusy=false,gsiLoading=false;
 function gateNeeded(){
-  if(!LOGIN_REQUIRED||acct()||/^file:/.test(location.protocol))return false;
+  if(DEV||!LOGIN_REQUIRED||acct()||/^file:/.test(location.protocol))return false;
   return !(pubCfg&&!pubCfg.err&&!pubCfg.googleClientId);
 }
 function renderGate(){
@@ -1916,10 +1933,12 @@ function acctCall(method,path,body){
   });});
 }
 function acctSchedule(){
+  if(DEV)return;
   var a=acct();if(!a||a.paused)return;
   clearTimeout(acctTimer);acctTimer=setTimeout(function(){acctPush(false);},15000);
 }
 function acctPush(loud){
+  if(DEV)return Promise.resolve();
   var a=acct();if(!a||acctBusy)return Promise.resolve();
   var payload=cloudPayload(),sig=JSON.stringify(payload);
   if(!loud&&sig===a.sig)return Promise.resolve();
@@ -2045,7 +2064,7 @@ function openLegal(){showSheet('Mentions légales','Confidentialité, avertissem
    par jour. Aucun identifiant, cookie ni donnée personnelle. Désactivable dans Réglages → À propos, et respecte « Ne pas me suivre » du navigateur. */
 function statsOn(){try{return !(state.ui&&state.ui.noStats)&&navigator.doNotTrack!=='1'&&window.doNotTrack!=='1';}catch(e){return true;}}
 function track(name,prop){
-  if(!statsOn()||/^file:/.test(location.protocol))return;
+  if(DEV||!statsOn()||/^file:/.test(location.protocol))return;
   try{
     var url=((state.ui&&state.ui.pubApi)||PUB_API)+'/pub/ev',body=JSON.stringify({e:name,p:prop||''});
     if(navigator.sendBeacon&&navigator.sendBeacon(url,new Blob([body],{type:'text/plain'})))return;
@@ -3909,7 +3928,17 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden){ren
    6. PWA : manifeste généré + service worker (si servi en https)
    ===================================================================== */
 
-if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+if(DEV){
+  /* profil de test : pas de cache hors ligne, pour voir les modifications du code tout de suite */
+  try{
+    if(navigator.serviceWorker)navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});});
+    if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});
+  }catch(e){}
+  var db=document.createElement('div');
+  db.textContent='PROFIL TEST · '+DEV;
+  db.setAttribute('style','position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99999;padding:2px 10px;border-radius:0 0 8px 8px;background:#ff9f0a;color:#000;font:700 10px/1.5 system-ui,sans-serif;letter-spacing:.06em;pointer-events:none');
+  document.body.appendChild(db);
+}else if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
