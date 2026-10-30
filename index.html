@@ -211,17 +211,46 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .legendrpe b{color:var(--t1);font-weight:600}
 
 /* ---------- Plan 26 semaines ---------- */
-.phasebar{position:relative;display:flex;gap:2px;height:14px;margin:10px 0 18px}
+.phasebar{position:relative;display:flex;gap:2px;height:14px;margin:12px 0 6px}
+.phticks{display:flex;gap:2px;margin:0 0 14px;font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums}
+.phticks span{min-width:0;white-space:nowrap}
 .phasebar span{display:block;border-radius:4px}
 .phasebar .mk{position:absolute;top:-6px;width:4px;height:26px;margin-left:-2px;border-radius:2px;background:#fff;box-shadow:0 0 0 2px #1c1c1e}
-.phl{display:flex;align-items:flex-start;gap:10px;margin:0 0 10px;font-size:14px}
-.phl i{flex:none;width:12px;height:12px;border-radius:4px;margin-top:4px}
-.phl p{margin:0;color:var(--t2);font-size:13.5px}
-.phl b{font-weight:600}
-.blk{margin:22px 0 8px}
-.blk h3{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em}
-.blk p{margin:3px 0 0;font-size:13.5px;color:var(--t2)}
-.blk .meta{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.plan-dates{margin:6px 0 0;font-size:15px;font-weight:600}
+.plan-h{display:flex;align-items:baseline;margin:24px 4px 10px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.plan-h span{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500;color:var(--t3)}
+.now{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:99px;background:var(--t1);color:#000;font-size:11px;font-weight:700;letter-spacing:0;line-height:1.3;vertical-align:2px}
+.plan-note{margin:12px 0 0;font-size:13px;color:var(--t2)}
+.phd{border-top:.5px solid var(--sep)}
+.phd:first-of-type{border-top:0}
+.phd>summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:44px;font-size:14.5px;cursor:pointer}
+.phd>summary::-webkit-details-marker{display:none}
+.phd>summary i{flex:none;width:12px;height:12px;border-radius:4px}
+.phd>summary b{font-weight:600}
+.phd>summary .muted{font-size:13px}
+.phd>summary::after{content:'';margin-left:auto;width:7px;height:7px;border-right:2px solid var(--t3);border-bottom:2px solid var(--t3);transform:rotate(45deg);transition:transform .2s;margin-right:4px}
+.phd[open]>summary::after{transform:rotate(-135deg)}
+.phd p{margin:0 0 12px 22px;color:var(--t2);font-size:13.5px}
+.pblk{position:relative;background:var(--card);border-radius:18px;margin:0 0 12px;overflow:hidden;scroll-margin-top:12px}
+.pblk.cur{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.28)}
+.pblk.past:not([open])>summary .bt b{color:var(--t2)}
+.pblk .pg{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.07)}
+.pblk .pg i{display:block;height:100%;background:var(--good)}
+.pblk[open]>summary .pg{display:none}
+.pblk>summary{position:relative;list-style:none;display:flex;align-items:center;gap:12px;padding:14px 16px;min-height:68px;cursor:pointer}
+.pblk>summary:active{background:rgba(255,255,255,.04)}
+.pblk>summary::-webkit-details-marker{display:none}
+.pblk>summary::after{content:'';flex:none;width:8px;height:8px;border-right:2px solid var(--t3);border-bottom:2px solid var(--t3);transform:rotate(45deg);transition:transform .2s;margin:0 4px 0 2px}
+.pblk[open]>summary::after{transform:rotate(-135deg)}
+.pblk .bt{flex:1;min-width:0}
+.pblk .bt b{display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+.pblk .bt .now{margin:0}
+.pblk .bt small{display:block;margin-top:2px;color:var(--t2);font-size:12.5px}
+.pblk .bh{flex:none;text-align:right;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.pblk .bh small{display:block;margin-top:2px;color:var(--t2);font-size:12px;font-weight:500}
+.pblk .bh small.ok{color:var(--good)}
+.pblk .bg{margin:0;padding:0 16px 12px;font-size:13.5px;color:var(--t2)}
+.pblk .wks{background:none;border-radius:0;border-top:.5px solid var(--sep)}
 .wks{background:var(--card);border-radius:18px;overflow:hidden}
 .wk{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;text-align:left;padding:12px 14px;min-height:64px;border-bottom:.5px solid var(--sep)}
 .wk:last-child{border-bottom:0}
@@ -2751,33 +2780,51 @@ function sessCard(s,isToday){
 }
 
 /* ---------- 25 semaines ---------- */
+var planOpen={};
+function planFold(id,def){return planOpen[id]!==undefined?planOpen[id]:!!def;}
 function vPlan(){
-  var st=status(),S_=stats(),h='';
-  h+=topbar('Vue d’ensemble','25 semaines',false,'more');
+  var st=status(),h='';
+  h+=topbar('Vue d’ensemble',NW+' semaines',false,'more');
   var tot=0;PLAN.forEach(function(w){tot+=w.min;});
+  var live=st.s==='during'||st.s==='raceday';
   var cur=st.s==='before'?0:st.s==='after'?NW:(st.w-1)+((diffDays(today(),PLAN_START)%7)+1)/7;
+  var curW=st.s==='before'?1:st.s==='after'?NW:st.w;
+  var vis=[];
+  PHASES.forEach(function(p,i){var a=0,b=0,w;for(w=1;w<=NW;w++)if(phaseOf(w)===p){if(!a)a=w;b=w;}if(a)vis.push({p:p,i:i,a:a,b:b});});
+  var yr=PLAN_START.getFullYear()!==RACE_DATE.getFullYear();
   h+='<section class="card"><div class="row"><h2 style="margin:0">Le programme</h2><span class="sp"></span><span class="chip">'+fh(tot)+' au total</span></div>'+
-    '<p class="small muted" style="margin:6px 0 0">'+fmtDay(PLAN_START)+' '+PLAN_START.getFullYear()+' → '+fmtLong(RACE_DATE).toLowerCase()+'. Cycles de 3 semaines de charge + 1 de décharge, puis un affûtage de '+T_TAPER+' semaine'+(T_TAPER>1?'s':'')+' avant la semaine de course.</p>'+
-    '<div class="phasebar" role="img" aria-label="Répartition des 4 phases">';
-  PHASES.forEach(function(p){h+='<span style="flex:'+(p.b-p.a+1)+';background:'+p.col+'"></span>';});
+    '<p class="plan-dates">'+fmtDay(PLAN_START)+' '+PLAN_START.getFullYear()+' → '+fmtLong(RACE_DATE).toLowerCase()+'</p>'+
+    '<div class="phasebar" role="img" aria-label="Répartition des '+vis.length+' phases">';
+  vis.forEach(function(v){h+='<span style="flex:'+(v.b-v.a+1)+';background:'+v.p.col+'"></span>';});
   if(st.s!=='before')h+='<i class="mk" style="left:'+(Math.min(100,cur/NW*100))+'%"></i>';
+  h+='</div><div class="phticks" aria-hidden="true">';
+  vis.forEach(function(v){h+='<span style="flex:'+(v.b-v.a+1)+'">S'+v.a+'</span>';});
   h+='</div>';
-  PHASES.forEach(function(p){h+='<div class="phl"><i style="background:'+p.col+'"></i><div><b>'+p.n+'</b> <span class="muted">· S'+p.a+(p.b>p.a?' à S'+p.b:'')+'</span><p>'+p.d+'</p></div></div>';});
-  h+='</section>';
+  vis.forEach(function(v){
+    var p=v.p,i=v.i,here=curW>=v.a&&curW<=v.b;
+    h+='<details class="phd" data-pl="ph'+i+'"'+(planFold('ph'+i,here)?' open':'')+'><summary><i style="background:'+p.col+'"></i><b>'+p.n+'</b><span class="muted">S'+v.a+(v.b>v.a?' à S'+v.b:'')+'</span>'+(live&&here?'<span class="now" style="margin-left:0">En cours</span>':'')+'</summary><p>'+p.d+'</p></details>';
+  });
+  h+='<p class="plan-note">Cycles de 3 semaines de charge + 1 de décharge, puis un affûtage de '+T_TAPER+' semaine'+(T_TAPER>1?'s':'')+' avant la semaine de course.</p></section>';
   var maxMin=0;PLAN.forEach(function(w){maxMin=Math.max(maxMin,w.min);});
+  h+='<h2 class="plan-h">Semaine par semaine<span>'+BLOCKS.length+' bloc'+(BLOCKS.length>1?'s':'')+'</span></h2>';
   BLOCKS.forEach(function(b){
-    var bm=0,i;for(i=b.a;i<=b.b;i++)bm+=PLAN[i-1].min;
-    h+='<div class="blk"><h3>'+b.n+'</h3><p>'+esc(b.g)+'</p><div class="meta"><span class="chip">S'+b.a+(b.b>b.a?' – S'+b.b:'')+'</span><span class="chip">'+fmtDay(PLAN[b.a-1].start)+' → '+fmtDay(addDays(PLAN[b.b-1].start,6))+'</span><span class="chip">'+fh(bm)+'</span></div></div><div class="wks">';
+    var bm=0,bd=0,bn=0,i;
+    for(i=b.a;i<=b.b;i++){bm+=PLAN[i-1].min;var q=wkStats(PLAN[i-1]);bd+=q.d;bn+=q.n;}
+    var all=bn>0&&bd===bn,id='b'+b.a;
+    var isNow=live&&curW>=b.a&&curW<=b.b,past=st.s==='after'||curW>b.b;
+    h+='<details class="pblk'+(isNow?' cur':'')+(past?' past':'')+'" data-pl="'+id+'"'+(planFold(id,curW>=b.a&&curW<=b.b)?' open':'')+'><summary><span class="bt"><b>'+b.n+(isNow?'<span class="now">En cours</span>':'')+'</b><small>S'+b.a+(b.b>b.a?' – S'+b.b:'')+' · '+fmtDay(PLAN[b.a-1].start)+' → '+fmtDay(addDays(PLAN[b.b-1].start,6))+(yr?' '+addDays(PLAN[b.b-1].start,6).getFullYear():'')+'</small></span>'+
+      '<span class="bh">'+fh(bm)+'<small'+(all?' class="ok"':'')+'>'+(all?'Terminé':bd+' / '+bn+' séance'+(bn>1?'s':''))+'</small></span>'+(bd?'<span class="pg"><i style="width:'+pct(bd,bn)+'%"></i></span>':'')+'</summary><p class="bg">'+esc(b.g)+'</p><div class="wks">';
     for(i=b.a;i<=b.b;i++){
       var wk=PLAN[i-1],ws=wkStats(wk),isCur=i===st.w&&(st.s==='during'||st.s==='raceday'),ok=ws.n>0&&ws.d===ws.n;
       h+='<button class="wk'+(isCur?' cur':'')+'" data-act="gowk" data-w="'+i+'"><span class="wn">'+i+'</span><span class="wm"><b>'+fmtRange(wk.start)+'</b><small>'+KIND[wk.kind]+(isCur?' · en cours':'')+'</small></span>'+
         '<span class="wh">'+(wk.kind==='race'?'Jour J':fh(wk.min))+bar(pct(wk.min,maxMin))+'</span>'+
-        (ok?'<span class="wd ok">'+ic('check',14)+'</span>':'<span class="wd">'+ws.d+'/'+ws.n+'</span>')+'</button>';
+        (ok?'<span class="wd ok">'+ic('check',14)+'</span>':'<span class="wd">'+(ws.n?ws.d+'/'+ws.n:'')+'</span>')+'</button>';
     }
-    h+='</div>';
+    h+='</div></details>';
   });
   return h;
 }
+document.getElementById('view').addEventListener('toggle',function(e){var d=e.target;if(d&&d.getAttribute&&d.getAttribute('data-pl'))planOpen[d.getAttribute('data-pl')]=d.open;},true);
 
 /* ---------- Notes & sensations ---------- */
 var FAT=[[1,3,'#0ca30c','Frais','Tu absorbes très bien la charge.'],[4,6,'#fab219','Normal','Fatigue habituelle pendant un bloc de charge.'],[7,8,'#ec835a','Marquée','Surveille : dors plus, baisse l’intensité si ça dure.'],[9,10,'#d03b3b','Élevée','Allège : remplace la prochaine séance dure par du facile ou du repos. Douleur persistante : avis médical.']];
@@ -2856,6 +2903,7 @@ function render(keep){
   var vw=document.getElementById('view');vw.className=keep?'':'enter';vw.innerHTML=VIEWS[tab]();
   renderTabs();
   window.scrollTo(0,y);
+  if(!keep&&tab==='plan')setTimeout(function(){var cb=document.querySelector('.pblk.cur');if(cb){var t=cb.getBoundingClientRect().top;if(t>window.innerHeight*0.55)window.scrollBy(0,t-84);}},80);
   if(pendDay!=null){var pd=pendDay;pendDay=null;setTimeout(function(){var el=document.getElementById('day-'+pd);if(el)el.scrollIntoView({block:'start'});},60);}
   lastDay=today().getTime();
   tick();
