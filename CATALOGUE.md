@@ -1,10 +1,10 @@
 # Catalogue de triathlons : mise à jour automatique
 
-Le catalogue est dans `races.js`. Chaque lundi, GitHub Actions lance `scripts/update-races.mjs`, sans IA et sans coût (dépôt public). Les petits changements sans risque sont publiés tout seuls. Les autres passent par une proposition (pull request) à valider.
+Le catalogue est dans `races.js`. Chaque lundi, GitHub Actions lance `scripts/update-races.mjs`, sans IA et sans coût (dépôt public). Les changements sont publiés tout seuls. Seul un lancement anormal passe par une proposition (pull request) à valider.
 
 ## Mise en place (une seule fois)
 
-Sur GitHub, dans **Settings → Actions → General → Workflow permissions** :
+Déjà fait si le robot a pu ouvrir sa première proposition. Sur GitHub, dans **Settings → Actions → General → Workflow permissions** :
 - choisis **Read and write permissions** ;
 - coche **Allow GitHub Actions to create and approve pull requests**.
 
@@ -12,21 +12,16 @@ Pour un premier essai : onglet **Actions → Mise à jour du catalogue → Run w
 
 ## Chaque semaine
 
-**Publié tout seul** (commit direct sur `main`, puis déploiement Vercel) si toutes ces conditions sont réunies :
-- 15 nouvelles courses au maximum ;
-- aucune date existante remplacée ;
-- aucun désaccord entre sources ;
-- aucune source en échec et aucune course ignorée ;
-- aucune proposition déjà ouverte.
+Tu n'as rien à faire. Si le catalogue change, le robot fait un commit sur `main` et Vercel publie.
 
-**Sinon, une proposition s'ouvre :**
+Le rapport du lancement (courses ajoutées, dates, désaccords) se lit dans l'onglet **Actions**, sur le lancement concerné.
 
-1. Tu reçois une notification GitHub.
-2. Ouvre la proposition et lis le rapport : sources lues, désaccords, dates ajoutées, nouvelles courses.
-3. Vérifie surtout les doublons parmi les nouvelles courses. Corrige ou retire une ligne directement dans la branche si besoin.
-4. Clique sur **Merge**. Si Vercel est relié au dépôt, il publie tout seul.
+**Trois garde-fous restent automatiques :**
+- **Contrôle du fichier :** un catalogue invalide, ou plus court qu'avant, n'est jamais écrit. Le lancement passe au rouge.
+- **Lancement anormal :** plus de 50 nouvelles courses ou plus de 10 dates remplacées d'un coup, c'est le signe d'un site modifié ou d'une mauvaise lecture. Une proposition s'ouvre au lieu de publier, et les lancements suivants attendent qu'elle soit traitée.
+- **Désaccord entre sources :** la date du catalogue ne change pas, et le désaccord figure dans le rapport.
 
-Si tu ne valides pas, la même proposition est simplement mise à jour la semaine suivante.
+**Sans relecture, des erreurs peuvent être publiées :** doublons, date erronée d'un calendrier, course mal classée. Corrige-les directement dans `races.js`.
 
 ## Sources
 

@@ -1,4 +1,4 @@
-# Met à jour le catalogue de triathlons (races.js) : publication directe si le changement est sans risque, sinon proposition à valider. Voir CATALOGUE.md.
+# Met à jour le catalogue de triathlons (races.js) et le publie, sauf lancement anormal (proposition à valider). Voir CATALOGUE.md.
 name: Mise à jour du catalogue
 
 on:
@@ -27,6 +27,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [ -f "$RUNNER_TEMP/report.md" ]; then cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"; fi
           if git diff --quiet -- races.js; then
             echo "Aucun changement dans le catalogue."
             exit 0
@@ -37,8 +38,8 @@ jobs:
           if [ "${{ steps.run.outputs.safe }}" = "true" ] && [ "$OPEN" = "0" ]; then
             git add races.js
             git commit -m "Catalogue : mise à jour automatique"
+            git pull --rebase origin ${{ github.event.repository.default_branch }}
             git push origin HEAD:${{ github.event.repository.default_branch }}
-            cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           git checkout -B bot/catalogue
@@ -53,6 +54,5 @@ jobs:
       - name: Prévenir si une source ne répond plus
         if: steps.run.outcome == 'failure'
         run: |
-          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
           echo "::error::Au moins une source de calendrier est en échec : voir le résumé."
           exit 1

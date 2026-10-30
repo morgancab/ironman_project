@@ -9,7 +9,8 @@ import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 const UA = 'Mozilla/5.0 (compatible; PlanTriathlonCatalog/1.0; +https://github.com/morgancab/ironman_project)';
 const FILE = new URL('../races.js', import.meta.url);
 const HEAD = '// Catalogue de triathlons : [nom, ville, pays, format, mois habituel (1-12, 0 = inconnu), options]. Mis à jour par scripts/update-races.mjs, voir CATALOGUE.md.\nwindow.RACE_CAT=[\n';
-const MAX_AUTO_ADD = 15;
+// Au-delà, le lancement est jugé anormal (site modifié, mauvaise lecture) : il passe par une proposition au lieu d'être publié
+const MAX_AUTO_ADD = 50, MAX_AUTO_CHANGE = 10;
 const TODAY = new Date().toISOString().slice(0, 10);
 const MAX_DATE = (Number(TODAY.slice(0, 4)) + 2) + TODAY.slice(4);
 // Fiabilité d'une date : 3 = organisateur, 2 = annoncée « confirmée » par un calendrier, 1 = calendrier sans statut
@@ -209,6 +210,13 @@ fresh.forEach((list) => {
   rep.added.push(r.name + ' · ' + (r.city || '?') + ' · ' + (date || 'mois ' + month) + ' (' + (c.src || r.src) + ')');
 });
 
+// Contrôle avant écriture : un catalogue invalide n'est jamais publié
+const FORMATS = ['full', 'half', 'olympic', 'sprint'];
+const bad = cat.filter((e) => !Array.isArray(e) || typeof e[0] !== 'string' || !e[0].trim() || typeof e[2] !== 'string' || !FORMATS.includes(e[3]) || !Number.isInteger(e[4]) || e[4] < 0 || e[4] > 12 || (e[5] && e[5].date && !validDate(e[5].date)));
+if (bad.length || cat.length < n0) {
+  console.error('Catalogue invalide, rien n’est écrit : ' + bad.length + ' ligne(s) incorrecte(s), ' + n0 + ' → ' + cat.length + ' lignes.\n' + bad.slice(0, 5).map((e) => JSON.stringify(e)).join('\n'));
+  process.exit(2);
+}
 // Écriture : une course par ligne, pour que les changements restent lisibles
 const out = HEAD + cat.map((e) => JSON.stringify(e)).join(',\n') + '\n];\n';
 const changed = out !== raw;
@@ -220,7 +228,7 @@ const md = '## Mise à jour du catalogue de triathlons\n\nCatalogue : ' + n0 + '
   '\nRègles et limites : voir CATALOGUE.md. Avant de valider, vérifie surtout les doublons parmi les nouvelles courses.\n';
 if (repI >= 0) writeFileSync(args[repI + 1], md); else console.log(md);
 console.error((changed ? 'Changements' : 'Aucun changement') + (dry ? ' (essai, rien d’écrit)' : '') + ' : ' + rep.added.length + ' nouvelles, ' + rep.dated.length + ' dates ajoutées, ' + rep.changed.length + ' remplacées, ' + rep.conflicts.length + ' à arbitrer, ' + rep.broken.length + ' source(s) en échec.');
-// Publication directe seulement pour les petits changements sans risque ; le reste passe par une proposition à valider
-const safe = !rep.broken.length && !rep.conflicts.length && !rep.changed.length && !rep.skipped.length && rep.added.length <= MAX_AUTO_ADD;
+// Publication automatique, sauf lancement anormal
+const safe = rep.added.length <= MAX_AUTO_ADD && rep.changed.length <= MAX_AUTO_CHANGE;
 if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'safe=' + safe + '\n');
 process.exit(rep.broken.length ? 1 : 0);
