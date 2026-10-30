@@ -10,6 +10,7 @@ Application web (PWA) de plan d'entraînement triathlon sur mesure. On choisit s
 - **Garmin** : les activités arrivent via intervals.icu et cochent les séances ; envoi possible des séances structurées vers la montre.
 - **Questionnaire de niveau** (menu Plus → Mon niveau) : sans Garmin, ou avec peu de sorties, un temps récent par discipline (5 km / 10 km / semi, une sortie vélo, 200 m à 1 500 m de natation) suffit pour déduire les allures des séances et estimer le temps de course. Les sorties Garmin passent toujours avant, discipline par discipline.
 - **Courses intermédiaires** (menu Plus → Mes courses) : triathlon, course à pied, vélo ou natation, avec un catalogue et une saisie libre. Le jour de la course remplace les séances, les jours autour sont allégés selon la distance et l'importance ; supprimer la course rétablit le plan.
+- **Séance manquée** : l'app recommande de la laisser tomber, de la reporter ou d'en faire une version courte, sans surcharger les jours suivants.
 - **Vacances et week-ends** : le plan est allégé ou déplacé pendant une absence.
 - **Compte Google** : le plan est enregistré sur l'appareil et dans le compte.
 - **Suivi propriétaire** (Plus → Suivi de l'app, réservé aux e-mails du secret `ADMIN_EMAILS`) : comptes, actifs, course choisie, progression et dernière visite de chaque utilisateur.

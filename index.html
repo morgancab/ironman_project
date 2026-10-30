@@ -294,6 +294,12 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .ef-hr{display:flex;justify-content:space-between;gap:10px;margin-top:12px;padding-top:12px;border-top:.5px solid var(--sep);font-size:13.5px;color:var(--t2)}
 .ef-hr b{color:var(--t1);font-weight:600;text-align:right}
 .ad-v{font-size:12.5px;font-weight:700}
+.mc.mis{background:rgba(255,94,78,.16);color:#ff6b61}
+.miss-c{box-shadow:inset 0 0 0 1px rgba(255,159,10,.35)}
+.miss-g{background:rgba(255,94,78,.08)!important}
+.miss-g>b{color:#ff6b61!important}
+.miss-b{display:flex;flex-direction:column;gap:8px}
+.miss-b .btn{margin:0}
 .plan-note{margin:12px 0 0;font-size:13px;color:var(--t2)}
 .phd{border-top:.5px solid var(--sep)}
 .phd:first-of-type{border-top:0}
@@ -1582,6 +1588,7 @@ function vHome(){
   h+='<header class="top"><div class="top-t"><div class="eyebrow">'+esc(fmtLong(today()))+'</div><h1>'+(first?'Bonjour '+esc(first):'Accueil')+'</h1></div><button class="iconbtn" data-act="settings" aria-label="Réglages et sauvegarde">'+ic('gear',22)+'</button></header>';
   h+=heroHtml(st);
   if(st.s==='during')h+='<p class="hline"><b>Semaine '+st.w+' sur '+NW+'</b> · '+esc(cur.ph.n)+(cur.kind==='rec'?' · semaine plus légère pour récupérer':cur.kind==='taper'?' · on baisse le volume avant la course':'')+'</p>';
+  h+=missCard();
   var nxs=nextStep();if(nxs){var nxd=diffDays(parseYmd(nxs.date),today());h+='<p class="hline"><b>Prochaine course : '+esc(nxs.name)+'</b> · '+(nxd?'J-'+nxd:'aujourd’hui')+'</p>';}
   // installation iOS
   var ios=/iphone|ipad|ipod/i.test(navigator.userAgent||'');
@@ -1959,6 +1966,89 @@ function openSteps(){
   b+='<button class="btn pri" data-act="stepnew" style="margin-top:12px">Ajouter une course</button>';
   showSheet('Mes courses','Ton objectif et tes étapes',b);sheetRoute('steps');
 }
+/* ---------- Séance manquée ----------
+   Une séance passée, non faite et sans décision est « manquée ». L'app recommande : la laisser tomber, la reporter ou en faire une version courte.
+   Décisions dans state.ui.missed[id] = {a:'skip'} ou {a:'move'|'short', to:'AAAA-MM-JJ'}. Le report passe par le même mécanisme que les vacances : annuler rétablit tout. */
+var MISS_DAYS=7,MISS_MAX_DAY=120;
+function missRec(){return state.ui.missed||{};}
+function isMissed(s){return !!s&&s.sp!=='rest'&&s.sp!=='race'&&s.w<NW&&!isDone(s)&&(s.w-1)*7+s.d<idxOfDate(today());}
+function missedList(){
+  var t=idxOfDate(today()),rec=missRec(),out=[],g;
+  for(g=t-1;g>=Math.max(0,t-MISS_DAYS);g--){if(g<(NW-1)*7)gday(g).forEach(function(x){if(isMissed(x)&&!rec[x.id])out.push(x);});}
+  return out;
+}
+// Le jour le plus adapté dans les 7 prochains : ni repos prévu, ni même discipline le même jour, ni journée déjà chargée, ni autour d'une longue séance ou d'une course
+function missTarget(m,sp){
+  var t=idxOfDate(today()),N=(NW-1)*7,block={},best=null,bc=1e9,g;
+  stepList().forEach(function(x){if(stepInPlan(x)){var c=idxOfDate(parseYmd(x.date));block[c-1]=block[c]=block[c+1]=1;}});
+  var isLong=function(i){return i>=0&&i<N&&gday(i).some(function(x){return x.sp!=='rest'&&x.min>=120;});};
+  for(g=Math.max(0,t);g<=Math.min(N-1,t+6);g++){
+    var wk=PLAN[Math.floor(g/7)];
+    if(wk.kind==='taper'||wk.kind==='race'||block[g]||isLong(g-1)||isLong(g+1))continue;
+    if(wk.layout[g%7].every(function(x){return (x.orig||x).sp==='rest'&&!(x.orig||x).fr;}))continue;
+    var l=0,same=false;gday(g).forEach(function(x){if(x.sp!=='rest'){l+=x.min;if(x.sp===sp)same=true;}});
+    if(same||l+m>MISS_MAX_DAY)continue;
+    var c2=l+(g-t)*10;
+    if(c2<bc){bc=c2;best=g;}
+  }
+  return best;
+}
+function missAdvice(s){
+  var src=awaySrc(s),kind=PLAN[src.w-1].kind,nf=(src.sp==='brick'||src.sp==='str')?null:stepAdapt(src,'light'),isShort=!!nf&&nf.sp!=='rest'&&nf.min<src.min;
+  var canMove=src.sp!=='brick'&&kind!=='taper',o={move:canMove?missTarget(src.min,src.sp):null,short:canMove&&isShort?missTarget(nf.min,src.sp):null,shortMin:isShort?nf.min:0};
+  if(src.sp==='brick'||src.sp==='str'||src.min<=30||kind==='rec'||kind==='taper'){o.rec='skip';o.why='Ne la rattrape pas : elle ne manquera pas à ta préparation. Passe à la suite.';}
+  else if(src.min>=90&&o.short!==null){o.rec='short';o.why='Séance importante, mais trop longue pour s’ajouter telle quelle à ta semaine : fais-en une version plus courte.';}
+  else if(o.move!==null){o.rec='move';o.why='Elle trouve sa place cette semaine sans te surcharger.';}
+  else if(o.short!==null){o.rec='short';o.why='Telle quelle, elle chargerait trop ta semaine : fais-en une version plus courte.';}
+  else{o.rec='skip';o.why='Ta semaine est déjà bien remplie : mieux vaut passer à la suite que tout rattraper.';}
+  return o;
+}
+function missDay(g){var d=addDays(PLAN_START,g);return DAYS[(d.getDay()+6)%7].slice(0,3).toLowerCase()+'. '+fmtDay(d);}
+function missButtons(s){
+  var o=missAdvice(s),b=[];
+  var btn=function(k,t){return '<button class="btn'+(o.rec===k?' pri':'')+'" data-act="missdo" data-id="'+s.id+'" data-a="'+k+'">'+t+'</button>';};
+  if(o.short!==null)b.push(['short',btn('short','Version courte ('+fh(o.shortMin)+') '+missDay(o.short))]);
+  if(o.move!==null)b.push(['move',btn('move','Reporter au '+missDay(o.move))]);
+  b.push(['skip',btn('skip','Laisser tomber')]);
+  b.sort(function(x,y){return (y[0]===o.rec)-(x[0]===o.rec);});
+  return '<p class="small muted" style="margin:0 0 10px">'+o.why+'</p><div class="miss-b">'+b.map(function(x){return x[1];}).join('')+'</div>';
+}
+function missCard(){
+  var l=missedList();if(!l.length)return '';
+  if(l.length>=3){
+    return '<section class="card miss-c"><div class="eyebrow">Séances manquées</div><h2 style="margin:6px 0 6px">'+l.length+' séances non faites en 7 jours</h2><p class="small muted" style="margin:0 0 12px">Ça arrive. Ne cherche pas à tout rattraper : c’est le meilleur moyen de te blesser. Reprends simplement le plan là où il en est.</p><div class="miss-b"><button class="btn pri" data-act="missall">Reprendre le plan</button><button class="btn" data-act="gowk" data-w="'+l[0].w+'">Voir les séances</button></div></section>';
+  }
+  var s=l[0],src=awaySrc(s),d=addDays(PLAN_START,ORIGPOS[s.id]?(ORIGPOS[s.id].w-1)*7+ORIGPOS[s.id].d:(s.w-1)*7+s.d);
+  return '<section class="card miss-c"><div class="eyebrow">Séance manquée'+(l.length>1?' · 1 sur '+l.length:'')+'</div><h2 style="margin:6px 0 2px">'+esc(src.title)+'</h2><p class="small muted" style="margin:0 0 10px">'+esc(DAYS[(d.getDay()+6)%7]+' '+fmtDay(d))+' · '+fh(src.min)+'</p>'+missButtons(s)+'</section>';
+}
+function missDo(id,a){
+  var s=SBY[id];if(!s)return;
+  var o=missAdvice(s),m=state.ui.missed=state.ui.missed||{},g=a==='move'?o.move:a==='short'?o.short:null,msg='Séance laissée de côté : on continue';
+  if(a==='skip')m[id]={a:'skip'};
+  else{if(g===null)return;m[id]={a:a,to:isoDate(addDays(PLAN_START,g))};msg=(a==='short'?'Version courte prévue ':'Séance reportée au ')+missDay(g);}
+  applyAway();save();render(true);toast(msg);
+}
+function missUndo(id){
+  var m=state.ui.missed||{};delete m[id];
+  applyAway();save();render(true);toast('Report annulé');
+}
+function missAll(){
+  var m=state.ui.missed=state.ui.missed||{};
+  missedList().forEach(function(x){m[x.id]={a:'skip'};});
+  save();render(true);toast('C’est reparti : on reprend le plan');
+}
+function applyMissed(){
+  var rec=missRec(),N=(NW-1)*7;
+  Object.keys(rec).forEach(function(id){
+    var r=rec[id],x=SBY[id],pos=ORIGPOS[id],d=r.to&&parseYmd(r.to);if(!x||!pos||!d)return;
+    var g=idxOfDate(d);if(g<0||g>=N)return;
+    if(r.a==='short'){
+      var src=awaySrc(x),nf=stepAdapt(src,'light');
+      if(nf){var snap=x.orig||copySess(x),w=x.w,dd=x.d;Object.keys(x).forEach(function(k){delete x[k];});Object.assign(x,nf,{id:id,w:w,d:dd,orig:snap,adapt:{mode:'light',label:'Séance manquée',pid:'miss'}});}
+    }
+    moveSess(x,g,(pos.w-1)*7+pos.d,{id:'miss',label:'Séance manquée'});
+  });
+}
 // skip : identifiant d'une période à ignorer (aperçu en cours de modification) ; skipStep : pareil pour une course intermédiaire
 function applyAway(skip,skipStep){
   PLAN.forEach(function(wk){if(!wk.layout){wk.layout=wk.days.map(function(day){return day.sessions.slice();});wk.layout.forEach(function(l,i){l.forEach(function(s){ORIGPOS[s.id]={w:wk.n,d:i};});});}});
@@ -1980,6 +2070,7 @@ function applyAway(skip,skipStep){
       if(op.to!==null){var pos=ORIGPOS[s.id];moveSess(s,op.to,(pos.w-1)*7+pos.d,p);}
     });
   });
+  applyMissed();
   applySteps(skipStep);
   PLAN.forEach(function(wk){
     wk.min=0;wk.m=0;wk.count=0;
@@ -2017,7 +2108,7 @@ function cloudKeys(code){
 function cloudBase(){return (state.ui&&state.ui.pubApi)||PUB_API;}
 function cloudPayload(){
   var u=state.ui||{};
-  return {app:'plan-triathlon',v:1,done:state.done,links:state.links,race:state.race||(SETUP?null:CFG),prof:u.prof||{},lv:u.lvl||{},st:u.steps||[],away:u.away||[],rc:u.race||{}};
+  return {app:'plan-triathlon',v:1,done:state.done,links:state.links,race:state.race||(SETUP?null:CFG),prof:u.prof||{},lv:u.lvl||{},st:u.steps||[],ms:u.missed||{},away:u.away||[],rc:u.race||{}};
 }
 function cloudEncrypt(keys,obj){
   var iv=crypto.getRandomValues(new Uint8Array(12));
@@ -2061,7 +2152,7 @@ function cloudPush(loud){
 }
 function cloudApply(p){
   state.done=p.done||{};state.links=p.links||{};
-  state.ui.prof=p.prof||{};state.ui.lvl=p.lv||{};state.ui.steps=p.st||[];state.ui.away=p.away||[];state.ui.race=p.rc||{};
+  state.ui.prof=p.prof||{};state.ui.lvl=p.lv||{};state.ui.steps=p.st||[];state.ui.missed=p.ms||{};state.ui.away=p.away||[];state.ui.race=p.rc||{};
   if(p.race&&p.race.date&&p.race.start)state.race=p.race;
 }
 // récupération (nouvel appareil ou restauration) : télécharge, déchiffre et remplace les données locales
@@ -2512,7 +2603,7 @@ function saveRace(){
   var cfg={sessions:nsess,id:'c'+Date.now().toString(36),name:d.name.trim()||(FORMATS[d.format].n+' '+yr),city:d.city||'',date:d.date,format:d.format,swimM:sw,bikeM:bk,runM:rn,bikeUp:num(d.bikeUp),runUp:num(d.runUp),start:isoDate(span.start),weeks:span.n,level:d.level,peak:(cls==='full'&&nsess===8&&Math.abs(pk-REF_PEAK/60)<0.05)?0:pk};
   if(!SETUP){
     if(!confirm('Remplacer ton plan actuel par un nouveau plan pour « '+cfg.name+' » ? Les séances cochées et les associations seront réinitialisées.'))return;
-    state.done={};state.links={};state.ui.away=[];state.ui.sent={};state.ui.race={};state.ui.welcomed=undefined;
+    state.done={};state.links={};state.ui.missed={};state.ui.away=[];state.ui.sent={};state.ui.race={};state.ui.welcomed=undefined;
   }
   track(SETUP?'plan_created':'plan_changed',cls+'|'+nsess+'s|l'+d.level);
   state.race=cfg;save();location.reload();
@@ -2675,6 +2766,7 @@ function awayBanner(wk){
   return sts+ps.map(function(p){return '<div class="banner" style="align-items:center">'+ic('info',20)+'<div style="flex:1"><b>'+esc(p.label)+' · '+AWAY_N[p.mode]+'</b><br>'+esc(fmtDay(parseYmd(p.from))+' → '+fmtDay(parseYmd(p.to)))+'</div><button class="chip" style="border:0" data-act="awayedit" data-id="'+esc(p.id)+'">Modifier</button></div>';}).join('');
 }
 function awayNote(s){
+  if(s.moved&&s.moved.pid==='miss'){var o0=addDays(PLAN_START,s.moved.from);return '<div class="goal adp-n"><b>Séance reportée</b>Prévue à l’origine le '+DAYS[(o0.getDay()+6)%7].toLowerCase()+' '+fmtDay(o0)+(s.adapt?', en version plus longue':'')+'.<br><button class="chip" style="border:0;min-height:28px;margin-top:8px" data-act="missundo" data-id="'+s.id+'">Annuler le report</button></div>';}
   if(s.step)return '<div class="goal adp-n"><b>Course intermédiaire</b>Tes séances autour de cette course sont adaptées.<br><button class="chip" style="border:0;min-height:28px;margin-top:8px" data-act="stepedit" data-id="'+esc(s.step)+'">Modifier la course</button></div>';
   if(!s.adapt&&!s.moved)return '';
   var pid=(s.adapt||s.moved).pid,lab=(s.adapt||s.moved).label,t='';
@@ -3012,11 +3104,14 @@ function sessCard(s,isToday){
   else mc='<span class="mc dur">'+fh(s.min)+'</span>'+kmChips(s)+'<span class="mc">'+esc(s.tag)+'</span>';
   if(s.adapt)mc+='<span class="mc adp">Adapté</span>';
   if(s.moved)mc+='<span class="mc adp">Déplacé</span>';
+  var mi=isMissed(s),mr=missRec()[s.id];
+  if(mi&&!mr)mc+='<span class="mc mis">Manquée</span>';
+  else if(mi&&mr&&mr.a==='skip')mc+='<span class="mc">Laissée de côté</span>';
   var h='<div class="sess sp-'+s.sp+(ok?' done':'')+(isOpen?' open':'')+'" data-sid="'+s.id+'"><div class="s-row">'+
     '<button class="s-main" data-act="open" data-id="'+s.id+'" aria-expanded="'+isOpen+'"><span class="s-ic">'+ic(s.sp,24)+'</span><span class="s-txt">'+(over?'<span class="s-ov">'+esc(over)+'</span>':'')+'<span class="s-t">'+esc(ttl)+'</span><span class="s-m">'+mc+'</span>'+
       (s.sum&&s.sp!=='race'&&s.sp!=='rest'?'<span class="s-sum">'+esc(s.sum)+'</span>':'')+(a?'<span class="s-sum"><b class="sv">Garmin</b> '+esc(actLine(a)+actWhen(a,s))+'</span>':'')+'</span><span class="s-chev">'+ic('down',20)+'</span></button>'+
     '<button class="chk" role="checkbox" aria-checked="'+ok+'" aria-label="'+(s.sp==='race'?'Course terminée':s.sp==='rest'?'Repos respecté':'Séance réalisée')+' : '+esc(s.title)+'" data-act="toggle" data-id="'+s.id+'"><i>'+ic('check',18)+'</i></button></div>'+
-    '<div class="s-det">'+awayNote(s)+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+detailBody(s)+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+garminBlock(s)+'</div></div>';
+    '<div class="s-det">'+(mi&&!mr?'<div class="goal miss-g"><b>Séance manquée</b>'+missButtons(s)+'</div>':'')+awayNote(s)+(s.goal?'<div class="goal"><b>Objectif</b>'+esc(s.goal)+'</div>':'')+actBlock(s)+detailBody(s)+(s.tip?'<div class="tip">'+esc(s.tip)+'</div>':'')+garminBlock(s)+'</div></div>';
   if(s.sp==='rest')h=h.replace(/<button class="chk".*?<\/button>/,'');
   return h;
 }
@@ -3234,6 +3329,9 @@ document.addEventListener('click',function(e){
   else if(a==='awaydel')delAway();
   else if(a==='svresync')svResync();
   else if(a==='settings')openSheet();
+  else if(a==='missdo')missDo(d.id,d.a);
+  else if(a==='missundo')missUndo(d.id);
+  else if(a==='missall')missAll();
   else if(a==='admreload')adminLoad();
   else if(a==='steps'){stepDraft=null;openSteps();}
   else if(a==='stepnew'){stepDraft=stepNew();renderStep();}
@@ -3399,7 +3497,7 @@ function closeSheet(){
   if(sheetDepth>0){var n=sheetDepth;sheetDepth=0;try{history.go(-n);}catch(e){}}
   else syncUrl(false);
 }
-function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,links:state.links,prof:state.ui.prof||{},lvl:state.ui.lvl||{},steps:state.ui.steps||[],away:state.ui.away||[],race:state.race||CFG});}
+function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,links:state.links,prof:state.ui.prof||{},lvl:state.ui.lvl||{},steps:state.ui.steps||[],missed:state.ui.missed||{},away:state.ui.away||[],race:state.race||CFG});}
 function doExport(){
   var txt=payload(),ta=document.getElementById('io');ta.value=txt;
   if(navigator.share){navigator.share({title:'Sauvegarde '+RNAME,text:txt}).catch(function(){});return;}
@@ -3411,11 +3509,11 @@ function doImport(){
   try{o=JSON.parse(ta.value);if(!o||o.app!=='ironman-sables-2027'||typeof o.done!=='object')throw 0;}
   catch(e){toast('Sauvegarde invalide');return;}
   if(!confirm('Remplacer les données actuelles par cette sauvegarde ?'))return;
-  state.done=o.done||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.lvl)state.ui.lvl=o.lvl;if(o.steps)state.ui.steps=o.steps;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
+  state.done=o.done||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.lvl)state.ui.lvl=o.lvl;if(o.steps)state.ui.steps=o.steps;if(o.missed)state.ui.missed=o.missed;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
 }
 function doReset(){
   if(!confirm('Effacer toutes les séances cochées ? Cette action est définitive.'))return;
-  state.done={};state.links={};state.ui.away=[];state.ui.steps=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
+  state.done={};state.links={};state.ui.missed={};state.ui.away=[];state.ui.steps=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
 }
 
 /* ---------- Niveau déclaré (sans historique Garmin) ----------
@@ -4398,7 +4496,7 @@ if(DEV){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={fm:fm,fh:fh,hms:hms,PHASES:PHASES,BLOCKS:BLOCKS,KINDS:KINDS,T_TAPER:T_TAPER,stepOps:stepOps,VIEWS:VIEWS,openWiz:openWiz,gatePreview:function(c){pubCfg=c;renderGate();},gateNeeded:gateNeeded,acctLogin:acctLogin,catSearch:catSearch,wtResults:wtResults,wtFormat:wtFormat,pickRace:pickRace,NSESS:NSESS,planSpan:planSpan,newRaceDraft:newRaceDraft,raceFormHtml:raceFormHtml,saveRace:saveRace,applyAway:applyAway,adaptFields:adaptFields,estKm:estKm,detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={fm:fm,fh:fh,hms:hms,PHASES:PHASES,BLOCKS:BLOCKS,KINDS:KINDS,T_TAPER:T_TAPER,stepOps:stepOps,VIEWS:VIEWS,missedList:missedList,missAdvice:missAdvice,missDo:missDo,missUndo:missUndo,missAll:missAll,isMissed:isMissed,openWiz:openWiz,gatePreview:function(c){pubCfg=c;renderGate();},gateNeeded:gateNeeded,acctLogin:acctLogin,catSearch:catSearch,wtResults:wtResults,wtFormat:wtFormat,pickRace:pickRace,NSESS:NSESS,planSpan:planSpan,newRaceDraft:newRaceDraft,raceFormHtml:raceFormHtml,saveRace:saveRace,applyAway:applyAway,adaptFields:adaptFields,estKm:estKm,detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
 applyAway();
 try{
   if(RCFG.migrate&&!state.ui.seen){state.ui.seen=1;save();}
