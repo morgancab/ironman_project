@@ -323,31 +323,8 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .wd{flex:none;width:34px;text-align:center;font-size:12.5px;color:var(--t2);font-variant-numeric:tabular-nums}
 .wd.ok{width:24px;height:24px;border-radius:50%;background:var(--good);color:#fff;display:grid;place-items:center;margin:0 5px}
 
-/* ---------- Notes ---------- */
-.fat{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.fb{height:48px;border-radius:12px;border:1.5px solid #48484a;background:none;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
-.fb[aria-pressed=true]{background:var(--fc);border-color:var(--fc);color:#000}
-.fb[aria-pressed=true].dk{color:#fff}
-.fmsg{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px;color:var(--t2)}
-.fmsg i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--fc);margin-top:5px}
-.fmsg b{color:var(--t1);font-weight:600}
-.moods{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.mb{border:1.5px solid #48484a;background:none;border-radius:14px;padding:8px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--t2);min-height:62px}
-.mb em{font-style:normal;font-size:26px;line-height:1.1}
-.mb[aria-pressed=true]{background:var(--t1);border-color:var(--t1);color:#000;font-weight:600}
-.pains{display:flex;flex-wrap:wrap;gap:8px}
-.pb{height:40px;padding:0 14px;border-radius:20px;border:1.5px solid #48484a;background:none;font-size:14px;font-weight:500;color:var(--t2)}
-.pb[aria-pressed=true]{background:var(--ser);border-color:var(--ser);color:#000;font-weight:650}
 textarea{width:100%;min-height:120px;resize:vertical;background:var(--card2);color:var(--t1);border:0;border-radius:14px;padding:12px;font:16px/1.4 inherit;font-family:inherit}
 textarea:focus{outline:2px solid #5a5a5e}
-.saved{font-size:12.5px;color:var(--t3);margin-top:6px;min-height:16px}
-.hist{display:flex;align-items:flex-start;gap:12px;width:100%;border:0;background:none;text-align:left;padding:11px 0;border-bottom:.5px solid var(--sep)}
-.hist:last-child{border-bottom:0}
-.hist .fv{flex:none;width:34px;height:34px;border-radius:10px;background:var(--fc,var(--card2));color:#000;display:grid;place-items:center;font-weight:800;font-size:15px}
-.hist .fv.dk{color:#fff}
-.hist p{margin:2px 0 0;font-size:13.5px;color:var(--t2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.alert{display:flex;gap:10px;align-items:flex-start;background:rgba(236,131,90,.14);border:1px solid rgba(236,131,90,.45);border-radius:16px;padding:12px 14px;margin:0 0 14px;font-size:14px;color:#f1d5c9}
-.alert svg{color:var(--ser);margin-top:1px}
 
 /* ---------- Feuille réglages / toast ---------- */
 .sheet-bg{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,.6);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -778,7 +755,7 @@ function fmtClass(c){
 function loadRaceCfg(){
   var s=null;try{s=JSON.parse(localStorage.getItem(KEY));}catch(e){}
   if(s&&s.race&&s.race.date&&s.race.start)return {cfg:s.race,fresh:false};
-  var used=s&&((s.done&&Object.keys(s.done).length)||(s.notes&&Object.keys(s.notes).length)||(s.sv&&s.sv.url)||(s.ui&&(s.ui.tab||s.ui.welcomed||s.ui.dflt||s.ui.prof)));
+  var used=s&&((s.done&&Object.keys(s.done).length)||(s.sv&&s.sv.url)||(s.ui&&(s.ui.tab||s.ui.welcomed||s.ui.dflt||s.ui.prof)));
   return {cfg:SABLES,fresh:!used,migrate:!!used};
 }
 var RCFG=loadRaceCfg(),CFG=RCFG.cfg,FCLS=fmtClass(CFG),FMT=FORMATS[FCLS];
@@ -1352,11 +1329,13 @@ var memOnly=false;
 function loadState(){
   try{
     var s=JSON.parse(localStorage.getItem(KEY));
-    if(s&&typeof s==='object')return {done:s.done||{},notes:s.notes||{},ui:s.ui||{},links:s.links||{},sv:s.sv||{},race:s.race};
+    if(s&&typeof s==='object')return {done:s.done||{},ui:s.ui||{},links:s.links||{},sv:s.sv||{},race:s.race};
   }catch(e){}
-  return {done:{},notes:{},ui:{},links:{},sv:{}};
+  return {done:{},ui:{},links:{},sv:{}};
 }
 var state=loadState();
+// Efface les notes (fatigue, douleurs) enregistrées par les anciennes versions
+try{var s0=JSON.parse(localStorage.getItem(KEY));if(s0&&s0.notes)localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
 if(RCFG.migrate&&!state.race){state.race=SABLES;try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}   // utilisateur existant : on fige sa course (Ironman des Sables d'Olonne)
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(state));memOnly=false;}
@@ -1457,7 +1436,7 @@ function parseRoute(){
   if(q>=0)h.slice(q+1).split('&').forEach(function(kv){var a=kv.split('=');if(a[0])p[a[0]]=decodeURIComponent(a[1]||'');});
   return {tab:q<0?h:h.slice(0,q),p:p};
 }
-var tab=state.ui.tab||'dash',wv=status().w,nv=status().w,sel=null,openSet={},pendDay=null;
+var tab=state.ui.tab||'dash',wv=status().w,sel=null,openSet={},pendDay=null;
 function applyRoute(){
   var r=parseRoute();
   if(TABNAMES.indexOf(r.tab)>=0)tab=r.tab;
@@ -2012,7 +1991,7 @@ function cloudKeys(code){
 function cloudBase(){return (state.ui&&state.ui.pubApi)||PUB_API;}
 function cloudPayload(){
   var u=state.ui||{};
-  return {app:'plan-triathlon',v:1,done:state.done,notes:state.notes,links:state.links,race:state.race||(SETUP?null:CFG),prof:u.prof||{},lv:u.lvl||{},st:u.steps||[],away:u.away||[],rc:u.race||{}};
+  return {app:'plan-triathlon',v:1,done:state.done,links:state.links,race:state.race||(SETUP?null:CFG),prof:u.prof||{},lv:u.lvl||{},st:u.steps||[],away:u.away||[],rc:u.race||{}};
 }
 function cloudEncrypt(keys,obj){
   var iv=crypto.getRandomValues(new Uint8Array(12));
@@ -2055,7 +2034,7 @@ function cloudPush(loud){
   .then(function(){cloudBusy=false;});
 }
 function cloudApply(p){
-  state.done=p.done||{};state.notes=p.notes||{};state.links=p.links||{};
+  state.done=p.done||{};state.links=p.links||{};
   state.ui.prof=p.prof||{};state.ui.lvl=p.lv||{};state.ui.steps=p.st||[];state.ui.away=p.away||[];state.ui.race=p.rc||{};
   if(p.race&&p.race.date&&p.race.start)state.race=p.race;
 }
@@ -2125,7 +2104,7 @@ function cloudFoldHtml(){
   return h;
 }
 /* ---------- Compte (connexion Google) ----------
-   Après « Continuer avec Google », le serveur vérifie l'identité et renvoie une session (90 jours). Le plan, les séances cochées, les notes et les
+   Après « Continuer avec Google », le serveur vérifie l'identité et renvoie une session (90 jours). Le plan, les séances cochées et les
    réglages sont enregistrés dans le compte (lisibles par le service, contrairement à la sauvegarde par code). La clé intervals.icu n'est jamais envoyée. */
 /* Connexion obligatoire : tant qu'il n'est pas connecté, l'utilisateur ne voit qu'un écran « Crée ton compte ».
    Garde-fous : jamais en ouverture de fichier (file://, la connexion Google y est impossible) ; si le serveur n'a pas de connexion Google configurée,
@@ -2355,7 +2334,7 @@ function accountFoldHtml(){
   if(!a){
     if(!pubCfg||!pubCfg.googleClientId)return '';
     setTimeout(acctRenderBtn,60);
-    return '<p>Connecte-toi pour retrouver ton plan sur tous tes appareils. Nous enregistrons ton e-mail, ton nom et ton plan (séances cochées, notes, réglages) dans ton compte. Tu peux tout exporter ou supprimer à tout moment.</p><div id="g-btn" style="display:flex;justify-content:center;min-height:44px"></div>';
+    return '<p>Connecte-toi pour retrouver ton plan sur tous tes appareils. Nous enregistrons ton e-mail, ton nom et ton plan (séances cochées, réglages) dans ton compte. Tu peux tout exporter ou supprimer à tout moment.</p><div id="g-btn" style="display:flex;justify-content:center;min-height:44px"></div>';
   }
   return '<p><b>'+esc(a.name||a.email)+'</b><br><span class="small muted">'+esc(a.email)+'</span></p><p>Ton plan est enregistré dans ton compte'+(a.t?' · dernière synchro : '+ago(a.t):'')+'. Il se met à jour automatiquement.</p>'+
     (a.conflict?'<p style="color:#ffd60a">Une version plus récente existe dans ton compte (autre appareil ?). Charge-la en te reconnectant, ou écrase-la avec cet appareil.</p>':'')+(a.err?'<p class="small muted">'+esc(a.err)+'</p>':'')+
@@ -2373,8 +2352,8 @@ function legalHtml(){
   var p=function(t){return '<p style="font-size:14px;line-height:1.55">'+t+'</p>';};
   return '<h4>Éditeur</h4>'+p('Application gratuite, éditée à titre personnel et sans but commercial.'+(LEGAL.editor?' Éditeur : '+esc(LEGAL.editor)+'.':'')+(LEGAL.contact?' Contact : '+esc(LEGAL.contact)+'.':''))+
     p('Hébergement de l’application : Vercel Inc. Serveur relais (recherche de courses, synchronisation Garmin facultative) : Cloudflare, Inc.')+
-    '<h4>Confidentialité</h4>'+p('Il n’y a ni publicité ni suivi publicitaire. Pour utiliser l’app, tu crées un compte en te connectant avec Google. Ton plan, tes séances cochées, tes notes et tes réglages sont enregistrés sur ton appareil et dans ton compte, pour que tu les retrouves partout. Pour suivre le service, le propriétaire de l’app peut voir ton nom, ton e-mail, ta course, ta progression (nombre de séances faites) et ta date de dernière visite, mais pas tes notes.')+
-    p('Seule la recherche de courses envoie le texte que tu tapes (3 caractères ou plus) à notre serveur relais, qui interroge le calendrier World Triathlon. Rien n’est enregistré à ton nom ; les réponses sont simplement mises en cache quelques heures. Si tu actives la synchronisation Garmin, tes activités passent par intervals.icu et ce serveur relais, sans y être conservées.')+p('Nous comptons de façon <b>anonyme</b> quelques événements (ouverture de l’app, création d’un plan avec son format, course choisie, recherche sans résultat) pour améliorer le service : ce sont de simples compteurs par jour, sans identifiant, sans cookie et sans adresse IP. Tu peux les désactiver dans Réglages → À propos, et ils respectent l’option « Ne pas me suivre » de ton navigateur.')+p('Si tu actives la <b>sauvegarde cloud</b>, une copie de ton plan, de tes séances cochées et de tes notes est envoyée <b>chiffrée</b> (la clé reste dans ton code de récupération, que nous ne connaissons pas) : nous ne pouvons pas la lire. Tu peux la supprimer à tout moment dans Réglages. Ta clé intervals.icu n’est jamais sauvegardée.')+p('À la création du compte (connexion avec <b>Google</b>), nous enregistrons ton identifiant Google, ton e-mail, ton nom et les dates de connexion, ainsi que ton plan (course choisie, séances cochées, notes, réglages) pour le retrouver sur tous tes appareils. Ces données ne sont ni vendues ni partagées. Tu peux les exporter ou supprimer ton compte à tout moment dans Réglages → Compte.')+
+    '<h4>Confidentialité</h4>'+p('Il n’y a ni publicité ni suivi publicitaire. Pour utiliser l’app, tu crées un compte en te connectant avec Google. Ton plan, tes séances cochées et tes réglages sont enregistrés sur ton appareil et dans ton compte, pour que tu les retrouves partout. Pour suivre le service, le propriétaire de l’app peut voir ton nom, ton e-mail, ta course, ta progression (nombre de séances faites) et ta date de dernière visite.')+
+    p('Seule la recherche de courses envoie le texte que tu tapes (3 caractères ou plus) à notre serveur relais, qui interroge le calendrier World Triathlon. Rien n’est enregistré à ton nom ; les réponses sont simplement mises en cache quelques heures. Si tu actives la synchronisation Garmin, tes activités passent par intervals.icu et ce serveur relais, sans y être conservées.')+p('Nous comptons de façon <b>anonyme</b> quelques événements (ouverture de l’app, création d’un plan avec son format, course choisie, recherche sans résultat) pour améliorer le service : ce sont de simples compteurs par jour, sans identifiant, sans cookie et sans adresse IP. Tu peux les désactiver dans Réglages → À propos, et ils respectent l’option « Ne pas me suivre » de ton navigateur.')+p('Si tu actives la <b>sauvegarde cloud</b>, une copie de ton plan et de tes séances cochées est envoyée <b>chiffrée</b> (la clé reste dans ton code de récupération, que nous ne connaissons pas) : nous ne pouvons pas la lire. Tu peux la supprimer à tout moment dans Réglages. Ta clé intervals.icu n’est jamais sauvegardée.')+p('À la création du compte (connexion avec <b>Google</b>), nous enregistrons ton identifiant Google, ton e-mail, ton nom et les dates de connexion, ainsi que ton plan (course choisie, séances cochées, notes, réglages) pour le retrouver sur tous tes appareils. Ces données ne sont ni vendues ni partagées. Tu peux les exporter ou supprimer ton compte à tout moment dans Réglages → Compte.')+
     '<h4>Avertissement</h4>'+p('Les plans proposés sont <b>indicatifs</b> et générés automatiquement : ils ne remplacent ni l’avis d’un médecin, ni celui d’un entraîneur. Consulte un professionnel de santé avant de reprendre ou d’intensifier une pratique sportive, et arrête-toi en cas de douleur ou de malaise. Tu t’entraînes sous ta seule responsabilité.')+
     '<h4>Données des courses</h4>'+p('Les noms, lieux, formats, distances et dates du catalogue sont donnés à titre indicatif, d’après des sources publiques (dont le calendrier de la Fédération Française de Triathlon et World Triathlon). Ils peuvent être incomplets ou changer : vérifie toujours auprès de l’organisateur avant de t’inscrire.')+
     '<h4>Marques et crédits</h4>'+p('IRONMAN et IRONMAN 70.3 sont des marques de leurs propriétaires ; Garmin, intervals.icu et World Triathlon sont cités pour identifier des services. Cette application est indépendante : elle n’est ni affiliée à ces organisations, ni approuvée par elles. Photo d’accueil : départ natation d’un Ironman, U.S. Navy (Chief Journalist Deborah Carson), domaine public.');
@@ -2485,7 +2464,7 @@ function raceFormHtml(d){
   }
   h+='</div></div>';
   h+='<button class="btn pri" data-act="racesave"'+(ok?'':' disabled style="opacity:.4"')+'>'+(SETUP?'Créer mon plan':'Changer de course')+'</button>';
-  if(!SETUP)h+='<button class="btn" data-act="closesheet" style="margin-top:10px">Annuler</button><p class="small muted" style="margin:12px 2px 0">Changer de course remplace ton plan et réinitialise les séances cochées, les notes et les associations. Tes activités Garmin et tes réglages sont conservés.</p>';
+  if(!SETUP)h+='<button class="btn" data-act="closesheet" style="margin-top:10px">Annuler</button><p class="small muted" style="margin:12px 2px 0">Changer de course remplace ton plan et réinitialise les séances cochées et les associations. Tes activités Garmin et tes réglages sont conservés.</p>';
   if(SETUP)h+=accountSetupHtml();
   if(SETUP&&!acct())h+='<div class="rsec" style="margin-top:22px"><div class="eyebrow">Déjà un plan sur un autre appareil ?</div><label class="inp wide"><span>Code de récupération</span><input id="cloud-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-X"></label><button class="btn" data-act="cloudget">Récupérer ma sauvegarde cloud</button></div>';
   if(SETUP)h+='<p class="small muted" style="margin:18px 2px 0;text-align:center;line-height:1.6">Plans indicatifs, sans avis médical.<br><button class="lnk" data-act="legal" style="margin:0">Mentions légales et confidentialité</button></p>';
@@ -2506,8 +2485,8 @@ function saveRace(){
   var pk=peakOf(d),yr=parseISO(d.date).getFullYear(),nsess=sessOf(d);
   var cfg={sessions:nsess,id:'c'+Date.now().toString(36),name:d.name.trim()||(FORMATS[d.format].n+' '+yr),city:d.city||'',date:d.date,format:d.format,swimM:sw,bikeM:bk,runM:rn,bikeUp:num(d.bikeUp),runUp:num(d.runUp),start:isoDate(span.start),weeks:span.n,level:d.level,peak:(cls==='full'&&nsess===8&&Math.abs(pk-REF_PEAK/60)<0.05)?0:pk};
   if(!SETUP){
-    if(!confirm('Remplacer ton plan actuel par un nouveau plan pour « '+cfg.name+' » ? Les séances cochées, les notes et les associations seront réinitialisées.'))return;
-    state.done={};state.notes={};state.links={};state.ui.away=[];state.ui.sent={};state.ui.race={};state.ui.welcomed=undefined;
+    if(!confirm('Remplacer ton plan actuel par un nouveau plan pour « '+cfg.name+' » ? Les séances cochées et les associations seront réinitialisées.'))return;
+    state.done={};state.links={};state.ui.away=[];state.ui.sent={};state.ui.race={};state.ui.welcomed=undefined;
   }
   track(SETUP?'plan_created':'plan_changed',cls+'|'+nsess+'s|l'+d.level);
   state.race=cfg;save();location.reload();
@@ -3098,67 +3077,10 @@ function vAdmin(){
   return h;
 }
 
-/* ---------- Notes & sensations ---------- */
-var FAT=[[1,3,'#0ca30c','Frais','Tu absorbes très bien la charge.'],[4,6,'#fab219','Normal','Fatigue habituelle pendant un bloc de charge.'],[7,8,'#ec835a','Marquée','Surveille : dors plus, baisse l’intensité si ça dure.'],[9,10,'#d03b3b','Élevée','Allège : remplace la prochaine séance dure par du facile ou du repos. Douleur persistante : avis médical.']];
-function fatInfo(f){for(var i=0;i<FAT.length;i++)if(f>=FAT[i][0]&&f<=FAT[i][1])return FAT[i];return null;}
-var MOODS=[['😫','Épuisé'],['😕','Lourd'],['😐','Moyen'],['🙂','Bien'],['💪','Au top']];
-var PAINS=['Genou','Tendon d’Achille','Mollet','Ischios','Hanche','Dos','Épaule','Pied'];
-function hasNote(n){return n&&(n.f||n.mood||(n.txt&&n.txt.trim())||(n.pains&&n.pains.length));}
-function vNotes(){
-  var st=status(),wk=PLAN[nv-1],n=state.notes[nv]||{},ws=wkStats(wk),h='',i;
-  h+=topbar('Fatigue & ressenti','Notes',false,'more');
-  h+='<div class="nav"><button class="iconbtn" data-act="nwd" data-d="-1" aria-label="Semaine précédente"'+(nv<=1?' disabled':'')+'>'+ic('left')+'</button>'+
-    '<div class="nav-c"><b>Semaine '+nv+' · '+KIND[wk.kind]+'</b><small>'+fmtRange(wk.start)+' · '+ws.d+'/'+ws.n+' séances</small></div>'+
-    '<button class="iconbtn" data-act="nwd" data-d="1" aria-label="Semaine suivante"'+(nv>=NW?' disabled':'')+'>'+ic('right')+'</button></div>';
-  // alerte surcharge : 2 dernières semaines notées ≥ 7
-  var rec=Object.keys(state.notes).map(Number).filter(function(w){return state.notes[w].f;}).sort(function(a,b){return b-a;});
-  if(rec.length>=2&&state.notes[rec[0]].f>=7&&state.notes[rec[1]].f>=7&&rec[0]-rec[1]===1)
-    h+='<div class="alert">'+ic('alert',20)+'<div><b>Fatigue élevée deux semaines de suite.</b> Pense à alléger la semaine suivante (ou à avancer la décharge) avant que la fatigue ne s’installe.</div></div>';
-  var fi=n.f?fatInfo(n.f):null;
-  h+='<section class="card"><h2>Fatigue de la semaine<small>1 = frais, 10 = cuit</small></h2><div class="fat" role="group" aria-label="Niveau de fatigue">';
-  for(i=1;i<=10;i++){var q=fatInfo(i);h+='<button class="fb'+(i>=9?' dk':'')+'" style="--fc:'+q[2]+'" data-act="fat" data-v="'+i+'" aria-pressed="'+(n.f===i)+'">'+i+'</button>';}
-  h+='</div>'+(fi?'<div class="fmsg" style="--fc:'+fi[2]+'"><i></i><div><b>'+fi[3]+'.</b> '+fi[4]+'</div></div>':'<div class="fmsg"><div>Touche un niveau pour noter ta semaine.</div></div>')+'</section>';
-  h+='<section class="card"><h2>Sensation générale</h2><div class="moods" role="group" aria-label="Sensation générale">';
-  MOODS.forEach(function(m,k){h+='<button class="mb" data-act="mood" data-v="'+(k+1)+'" aria-pressed="'+(n.mood===k+1)+'"><em>'+m[0]+'</em>'+m[1]+'</button>';});
-  h+='</div></section>';
-  h+='<section class="card"><h2>Douleurs ou gênes<small>touche pour sélectionner</small></h2><div class="pains" role="group" aria-label="Douleurs ou gênes">';
-  PAINS.forEach(function(p){h+='<button class="pb" data-act="pain" data-v="'+esc(p)+'" aria-pressed="'+((n.pains||[]).indexOf(p)>=0)+'">'+esc(p)+'</button>';});
-  h+='</div></section>';
-  h+='<section class="card"><h2>Mes retours</h2><textarea id="ntxt" placeholder="Sommeil, appétit, motivation, séances clés, ce qui a bien ou mal marché…" aria-label="Notes de la semaine">'+esc(n.txt||'')+'</textarea><div class="saved" id="saved">'+(n.t?'Enregistré automatiquement':'')+'</div></section>';
-  // tendance
-  var pts=[];PLAN.forEach(function(w){var q=state.notes[w.n];if(q&&q.f)pts.push([w.n,q.f]);});
-  if(pts.length>=1){
-    h+='<section class="card"><h2>Tendance de fatigue<small>par semaine</small></h2><div class="chartwrap">'+fatChart(pts)+'</div></section>';
-  }
-  // historique
-  var keys=Object.keys(state.notes).map(Number).filter(function(w){return hasNote(state.notes[w]);}).sort(function(a,b){return b-a;});
-  h+='<section class="card"><h2>Historique</h2>';
-  if(!keys.length)h+='<p class="small muted" style="margin:0">Aucune note pour l’instant. Remplis la fatigue chaque dimanche soir : en quelques semaines, tu verras ce qui te fatigue vraiment.</p>';
-  keys.forEach(function(w){
-    var q=state.notes[w],f=q.f?fatInfo(q.f):null;
-    h+='<button class="hist" data-act="gonote" data-w="'+w+'"><span class="fv'+(q.f>=9?' dk':'')+'" style="'+(f?'--fc:'+f[2]:'')+'">'+(q.f||'–')+'</span><span style="flex:1;min-width:0"><b style="font-size:15px;font-weight:600">S'+w+' · '+fmtRange(PLAN[w-1].start)+' '+(q.mood?MOODS[q.mood-1][0]:'')+'</b>'+
-      ((q.pains&&q.pains.length)?'<p>Gênes : '+esc(q.pains.join(', '))+'</p>':'')+(q.txt&&q.txt.trim()?'<p>'+esc(q.txt.trim())+'</p>':'')+'</span></button>';
-  });
-  h+='</section>';
-  return h;
-}
-function fatChart(pts){
-  var W=340,H=130,L=22,B=20,T=8,R=10,slot=(W-L-R)/(NW-1),yv=function(v){return T+(H-T-B)*(1-v/10);},xv=function(n){return L+(n-1)*slot;},i,s;
-  s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Évolution de la fatigue notée, de 1 à 10, semaine par semaine">';
-  [0,5,10].forEach(function(v){s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yv(v)+'" y2="'+yv(v)+'" stroke="'+(v?'#2c2c2e':'#48484a')+'"/><text x="'+(L-6)+'" y="'+(yv(v)+3.5)+'" text-anchor="end" font-size="10" fill="#85847d">'+v+'</text>';});
-  var d='';pts.forEach(function(p,k){d+=(k?'L':'M')+xv(p[0]).toFixed(1)+' '+yv(p[1]).toFixed(1);});
-  if(pts.length>1)s+='<path d="'+d+'" fill="none" stroke="#f5f4ef" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
-  pts.forEach(function(p){s+='<circle cx="'+xv(p[0]).toFixed(1)+'" cy="'+yv(p[1]).toFixed(1)+'" r="4.5" fill="#f5f4ef" stroke="#1c1c1e" stroke-width="2"/>';});
-  var last=pts[pts.length-1];
-  s+='<text x="'+Math.min(W-R-4,xv(last[0])+8)+'" y="'+(yv(last[1])-9)+'" font-size="11" font-weight="700" fill="#f5f4ef" text-anchor="'+(last[0]>NW-3?'end':'start')+'">'+last[1]+'</text>';
-  [1,5,9,13,17,21,25].forEach(function(n){s+='<text x="'+xv(n)+'" y="'+(H-5)+'" text-anchor="middle" font-size="10" fill="#85847d">S'+n+'</text>';});
-  return s+'</svg>';
-}
-
 /* =====================================================================
    5. RENDU, ÉVÉNEMENTS, RÉGLAGES
    ===================================================================== */
-var VIEWS={dash:vHome,week:vWeek,data:function(){return topbar('Analyse','Données',false)+vData();},race:function(){return topbar(RNAME,'Course',false)+vRace();},more:vMore,plan:vPlan,notes:vNotes,admin:vAdmin};
+var VIEWS={dash:vHome,week:vWeek,data:function(){return topbar('Analyse','Données',false)+vData();},race:function(){return topbar(RNAME,'Course',false)+vRace();},more:vMore,plan:vPlan,admin:vAdmin};
 function renderTabs(){
   document.getElementById('tabs').innerHTML=TABS.map(function(t){
     return '<button class="tab" data-act="tab" data-tab="'+t[0]+'" role="tab" aria-selected="'+(t[0]===tabOf(tab))+'"><span class="ti">'+ic(t[2],24)+'</span><span>'+t[1]+'</span></button>';
@@ -3191,11 +3113,6 @@ function toast(m){
   var el=document.getElementById('toast');el.textContent=m;el.className='on';
   clearTimeout(toastT);toastT=setTimeout(function(){el.className='';},2600);
 }
-function setNote(w,patch){
-  var n=Object.assign({},state.notes[w]||{},patch);n.t=Date.now();state.notes[w]=n;save();
-}
-function toggleArr(a,v){a=(a||[]).slice();var i=a.indexOf(v);if(i>=0)a.splice(i,1);else a.push(v);return a;}
-
 document.addEventListener('click',function(e){
   var el=e.target.closest?e.target.closest('[data-act]'):null;
   if(!el)return;
@@ -3213,11 +3130,6 @@ document.addEventListener('click',function(e){
   else if(a==='wkd'){wv=Math.max(1,Math.min(NW,wv+(+d.d)));render(false);}
   else if(a==='wknow'){wv=status().w;render(false);}
   else if(a==='gowk'){wv=+d.w;tab='week';state.ui.tab=tab;save();syncUrl(true);render(false);}
-  else if(a==='nwd'){nv=Math.max(1,Math.min(NW,nv+(+d.d)));render(false);}
-  else if(a==='gonote'){nv=+d.w;render(false);}
-  else if(a==='fat'){var v=+d.v;setNote(nv,{f:(state.notes[nv]&&state.notes[nv].f===v)?0:v});render(true);}
-  else if(a==='mood'){var m=+d.v;setNote(nv,{mood:(state.notes[nv]&&state.notes[nv].mood===m)?0:m});render(true);}
-  else if(a==='pain'){setNote(nv,{pains:toggleArr((state.notes[nv]||{}).pains,d.v)});render(true);}
   else if(a==='chart'){
     var r=el.getBoundingClientRect(),W=340,L=26,Rr=4,x=(e.clientX-r.left)/r.width*W,i=Math.floor((x-L)/((W-L-Rr)/NW));
     sel=Math.max(1,Math.min(NW,i+1));render(true);
@@ -3388,10 +3300,6 @@ document.addEventListener('input',function(e){
     p[k]=(k==='thr'||k==='css')?parseT(v):(parseInt(v,10)||0);
     save();render(true);return;
   }
-  if(e.target&&e.target.id==='ntxt'){
-    setNote(nv,{txt:e.target.value});
-    var s=document.getElementById('saved');if(s)s.textContent='Enregistré automatiquement';
-  }
 });
 /* Semaine : balayage gauche / droite pour changer de semaine (les flèches restent) */
 (function(){
@@ -3465,7 +3373,7 @@ function closeSheet(){
   if(sheetDepth>0){var n=sheetDepth;sheetDepth=0;try{history.go(-n);}catch(e){}}
   else syncUrl(false);
 }
-function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,notes:state.notes,links:state.links,prof:state.ui.prof||{},lvl:state.ui.lvl||{},steps:state.ui.steps||[],away:state.ui.away||[],race:state.race||CFG});}
+function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,links:state.links,prof:state.ui.prof||{},lvl:state.ui.lvl||{},steps:state.ui.steps||[],away:state.ui.away||[],race:state.race||CFG});}
 function doExport(){
   var txt=payload(),ta=document.getElementById('io');ta.value=txt;
   if(navigator.share){navigator.share({title:'Sauvegarde '+RNAME,text:txt}).catch(function(){});return;}
@@ -3474,14 +3382,14 @@ function doExport(){
 }
 function doImport(){
   var ta=document.getElementById('io'),o;
-  try{o=JSON.parse(ta.value);if(!o||o.app!=='ironman-sables-2027'||typeof o.done!=='object'||typeof o.notes!=='object')throw 0;}
+  try{o=JSON.parse(ta.value);if(!o||o.app!=='ironman-sables-2027'||typeof o.done!=='object')throw 0;}
   catch(e){toast('Sauvegarde invalide');return;}
   if(!confirm('Remplacer les données actuelles par cette sauvegarde ?'))return;
-  state.done=o.done||{};state.notes=o.notes||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.lvl)state.ui.lvl=o.lvl;if(o.steps)state.ui.steps=o.steps;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
+  state.done=o.done||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.lvl)state.ui.lvl=o.lvl;if(o.steps)state.ui.steps=o.steps;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
 }
 function doReset(){
-  if(!confirm('Effacer toutes les séances cochées et toutes les notes ? Cette action est définitive.'))return;
-  state.done={};state.notes={};state.links={};state.ui.away=[];state.ui.steps=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
+  if(!confirm('Effacer toutes les séances cochées ? Cette action est définitive.'))return;
+  state.done={};state.links={};state.ui.away=[];state.ui.steps=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
 }
 
 /* ---------- Niveau déclaré (sans historique Garmin) ----------

@@ -39,10 +39,10 @@ Puis republie sur Vercel : `index.html`, `sw.js`, `manifest.webmanifest` et les 
 - Dans l'app : Réglages (bouton en haut à droite de l'Accueil) → groupe **Compte** → « Continuer avec Google ».
 
 ## Ce qui est enregistré pour chaque utilisateur
-Identifiant Google, e-mail, nom, dates de création, de dernière connexion et de dernière visite, nombre de séances faites et prévues, et son plan (course, séances cochées, notes, réglages). Jamais la clé intervals.icu. Chaque utilisateur peut exporter ses données et supprimer son compte depuis Réglages → Compte.
+Identifiant Google, e-mail, nom, dates de création, de dernière connexion et de dernière visite, nombre de séances faites et prévues, et son plan (course, séances cochées, réglages). Jamais la clé intervals.icu. Chaque utilisateur peut exporter ses données et supprimer son compte depuis Réglages → Compte.
 
 ## Suivre l'app (propriétaire)
-**Plus → Suivi de l'app** (`#admin`) affiche la vue d'ensemble et, pour chaque compte, la course choisie, la progression et la dernière visite. Les notes n'y figurent jamais. L'accès est vérifié par le serveur : seuls les e-mails Google listés dans le secret `ADMIN_EMAILS` y ont droit.
+**Plus → Suivi de l'app** (`#admin`) affiche la vue d'ensemble et, pour chaque compte, la course choisie, la progression et la dernière visite. L'accès est vérifié par le serveur : seuls les e-mails Google listés dans le secret `ADMIN_EMAILS` y ont droit.
 
 ```
 npx wrangler d1 execute triathlon-stats --remote --file schema4.sql

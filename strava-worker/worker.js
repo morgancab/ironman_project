@@ -233,7 +233,7 @@ async function accountRoutes(req, url, env) {
 
 /* ---------- Suivi propriétaire ----------
    Route : GET /pub/admin/overview (session Google d'un e-mail listé dans le secret ADMIN_EMAILS, séparés par des virgules).
-   Seules la course et la progression sont lues dans le plan : jamais les notes ni les réglages. Les comptes propriétaires sont listés mais exclus des totaux. */
+   Seules la course et la progression sont lues dans le plan, jamais les réglages. Les comptes propriétaires sont listés mais exclus des totaux. */
 function isAdmin(env, email) {
   return String(env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(String(email || '').toLowerCase());
 }
