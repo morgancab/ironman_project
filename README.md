@@ -21,7 +21,8 @@ Application web (PWA) de plan d'entraînement triathlon sur mesure. On choisit s
 |---|---|
 | `index.html` | Toute l'application : HTML, CSS et JavaScript, sans dépendance ni étape de compilation. |
 | `races.js` | Catalogue des triathlons, mis à jour automatiquement : voir [CATALOGUE.md](CATALOGUE.md). |
-| `scripts/`, `.github/workflows/` | Script et tâche hebdomadaire de mise à jour du catalogue. |
+| `scripts/`, `.github/workflows/` | Script et tâche hebdomadaire de mise à jour du catalogue, lancement des tests. |
+| `tests/` | Tests automatiques. |
 | `sw.js` | Service worker (cache hors ligne). Changer le numéro dans `CACHE` à chaque version importante. |
 | `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `favicon-48.png` | Installation sur l'écran d'accueil. |
 | `strava-worker/` | Serveur Cloudflare Worker : comptes Google, sauvegarde, statistiques, lien avec intervals.icu. Le dossier garde son ancien nom, il ne gère plus Strava. |
@@ -38,6 +39,14 @@ npx serve -l 8080 .
 ```
 
 Puis ouvrir http://localhost:8080. Pour tester comme un nouvel utilisateur sans toucher à ton vrai profil : [DEV.md](DEV.md) (`?profil=nom`).
+
+## Tests
+
+```
+node --test "tests/*.test.mjs"
+```
+
+Sans dépendance : le vrai code de l'app tourne dans un faux navigateur (`tests/harness.mjs`). Les tests couvrent 245 plans (5 formats, de 4 à 52 semaines), les courses intermédiaires, les vacances, les durées et le catalogue. GitHub les lance à chaque envoi sur `main`.
 
 ## Adresses (URL)
 

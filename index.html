@@ -803,8 +803,9 @@ function fmtRange(s){
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
 function R5(x){return Math.round(x/5)*5;}
-function fm(m){var h=Math.floor(m/60),r=m%60;return h?(r?h+' h '+(r<10?'0':'')+r:h+' h'):m+' min';}
-function fh(m){return fm(Math.round(m));}
+// Durées : toujours au format 1h36. fm sert aux consignes des séances, où « 45 min » reste plus naturel sous l'heure.
+function fm(m){var h=Math.floor(m/60),r=m%60;return h?h+'h'+(r<10?'0':'')+r:m+' min';}
+function fh(m){m=Math.round(m);var r=m%60;return Math.floor(m/60)+'h'+(r<10?'0':'')+r;}
 function km(m){return (m/1000).toFixed(1).replace('.',',');}
 function pct(a,b){return b?Math.max(0,Math.min(100,Math.round(a/b*100))):0;}
 
@@ -953,10 +954,19 @@ function scaleRow(r,f,cap,mask){
   return o.map(function(x,i){return mask[i]?x:0;});
 }
 var T_TAPER=FMT.taper||1,KINDS=genKinds(NW,T_TAPER),REFW=refMap(KINDS);
+if(T_TAPER>1){REFW[NW-3]=23;REFW[NW-2]=24;}                                   // affûtage sur 2 semaines : toujours les deux semaines de référence, la seconde plus légère
 var NSESS=Math.max(3,Math.min(8,CFG.sessions||8));
 var REF_SUB=Math.max.apply(null,REF_VOL.slice(0,24).map(function(r){return rowMinM(r,colMask(NSESS,r));}));   // heures du pic de référence avec ces séances (= REF_PEAK pour 8 séances)
 var PK=CFG.peak?CFG.peak*60/REF_SUB:1,PF=Math.abs(PK-1)<0.003?1:PK;
 var VOL=KINDS.map(function(k,i){var r=REF_VOL[REFW[i]-1];return k==='race'?[0,0,0,0,0,0,0,0]:scaleRow(r,PF,PF===1&&FCLS==='full'?null:CAPS[FCLS],colMask(NSESS,r));});
+// Si l'affûtage de référence dépasse 75 % du pic du plan, toutes ses semaines sont réduites d'autant : la dernière reste la plus légère
+(function(){
+  var all=[1,1,1,1,1,1,1,1],peak=0,top=0;
+  VOL.forEach(function(v,i){var m=rowMinM(v,all);if(KINDS[i]==='taper')top=Math.max(top,m);else if(KINDS[i]!=='race')peak=Math.max(peak,m);});
+  if(!peak||top<=peak*0.75)return;
+  var f=peak*0.75/top;
+  VOL.forEach(function(v,i){if(KINDS[i]==='taper')VOL[i]=scaleRow(v,f).map(function(x,j){return v[j]?x:0;});});
+})();
 var META=KINDS.map(function(k,i){return k==='race'?['race','Semaine de course : '+RNAME]:[k,gx(REF_META[REFW[i]-1][1])];});
 var BUILD=NW-1-T_TAPER,PH_E1=Math.max(1,Math.round(BUILD*8/22)),PH_E2=Math.min(BUILD-1,Math.max(PH_E1+1,Math.round(BUILD*16/22)));
 var PHASES=REF_PHASES.map(function(p,i){
@@ -2441,7 +2451,7 @@ function sessOf(d){return d.sessions!=null?d.sessions:DEFSESS[raceCls(d)][d.leve
 function maxPeak(n,cls){return n*PERSESS[cls];}
 function defPeak(cls,lvl,n){var F=FORMATS[cls],base=F.peak[lvl]||REF_PEAK/60;return n==null?base:Math.min(base,maxPeak(n,cls));}
 function peakOf(d){var cls=raceCls(d);return d.peak!=null?d.peak:defPeak(cls,d.level,sessOf(d));}
-function fmtHrs(x){var h=Math.floor(x+1e-9),m=Math.round((x-h)*60);return m===60?(h+1)+' h':h+' h'+(m?' '+pad2(m):'');}
+function fmtHrs(x){var h=Math.floor(x+1e-9),m=Math.round((x-h)*60);return m===60?(h+1)+'h00':h+'h'+pad2(m);}
 function newRaceDraft(){
   var t=addDays(today(),84);
   return {name:'',date:'',format:'olympic',level:1,peak:null,swimKm:'',bikeKm:'',runKm:'',bikeUp:'',runUp:'',cal:{y:t.getFullYear(),m:t.getMonth()},detail:false,startMode:'now',start:'',scal:{y:today().getFullYear(),m:today().getMonth()}};
@@ -2829,7 +2839,7 @@ function wkText(wk){
 // Nom de la séance dans Garmin : jour + date + sport et type de séance + durée (distance pour la natation). Ex. « Jeu 3 juin · Course Allure Ironman · 1h15 »
 function evName(s){
   var d=addDays(PLAN_START,sessIdx(s)),dt=DAYS[s.d].slice(0,3)+' '+dnum(d)+' '+MONTHS[d.getMonth()].replace('.','');
-  var q=s.sp==='swim'&&s.m?km(s.m)+' km':fm(s.min).replace(/ h /,'h').replace(/ h$/,'h').replace(/ min$/,'min');
+  var q=s.sp==='swim'&&s.m?km(s.m)+' km':fm(s.min).replace(/ min$/,'min');
   var t=s.title.replace(' · ',' '),n=dt+' · '+t+' · '+q;
   if(n.length>48)n=dt+' · '+t;                                   // trop long : on garde la date et le titre
   if(n.length>48)n=n.slice(0,47).replace(/\s+\S*$/,'')+'…';       // encore trop long : on tronque proprement
@@ -3488,6 +3498,7 @@ function tpSplit(u,t){var o={},r=Math.round(t);if(u.h){o.h=Math.floor(r/3600);r-
 function tpTxt(c){
   if(!c.v&&!c.zero)return 'Choisir';
   var o=tpSplit(c.u,c.v);
+  if(c.u.h&&c.u.m&&!c.u.s)return fh(c.v/60);
   return Object.keys(c.u).map(function(f,n){return (n===0?o[f]:('0'+o[f]).slice(-2))+' '+TPU[f][0];}).join(' ');
 }
 function tpField(id,label,hint){
@@ -3649,8 +3660,8 @@ function estRace(all,P,cut){
   return out;
 }
 function estAll(all,P,cut){var r={};Object.keys(RSCEN).forEach(function(k){r[k]=estRace(all,Object.assign({},P,{scen:k}),cut);});return r;}
-function gapTxt(s){s=Math.abs(s);return s<3600?Math.max(1,Math.round(s/60))+' min':hms(s);}
-function hms(s){s=Math.round(s/60)*60;var h=Math.floor(s/3600),m=Math.round(s%3600/60);return h+' h '+('0'+m).slice(-2);}
+function gapTxt(s){return hms(Math.max(60,Math.abs(s)));}
+function hms(s){return fh(s/60);}
 function parseHM(s){var m=/^\s*(\d{1,2})\s*[:hH]\s*(\d{1,2})?\s*$/.exec(s||'');return m?(+m[1])*3600+(+(m[2]||0))*60:0;}
 function paceOf(k,t){return k==='swim'?mmss(t/RACE.swimM*100)+' /100 m':k==='bike'?(RACE.bikeM/t*3.6).toFixed(1).replace('.',',')+' km/h':mmss(t/RACE.runM*1000)+' /km';}
 function evoChart(pts){
@@ -4200,7 +4211,7 @@ function detMore(a,j){
   return h||'<p class="small muted">Pas de détail supplémentaire pour cette activité.</p>';
 }
 function adHero(a,k){
-  var dm=Math.round(a.d/60),big=[['Durée',Math.floor(dm/60)+'h'+('0'+dm%60).slice(-2),'']],p;
+  var big=[['Durée',fh(a.d/60),'']],p;
   if(a.m>0)big.push(['Distance',km(a.m),'km']);
   if(k==='run'||k==='swim'||k==='bike'){p=paceTxt(k,a.m,a.d);var q=p.indexOf(' ');big.push([k==='bike'?'Vitesse moy.':'Allure moy.',q>0?p.slice(0,q):p,q>0?p.slice(q+1):'']);}
   return '<div class="ad-hero sp-'+(k==='oth'?'str':k)+'">'+big.map(function(b){return '<div><span class="kl">'+b[0]+'</span><b>'+b[1]+(b[2]?'<small>'+b[2]+'</small>':'')+'</b></div>';}).join('')+'</div>';
@@ -4387,7 +4398,7 @@ if(DEV){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-window.IM={openWiz:openWiz,gatePreview:function(c){pubCfg=c;renderGate();},gateNeeded:gateNeeded,acctLogin:acctLogin,catSearch:catSearch,wtResults:wtResults,wtFormat:wtFormat,pickRace:pickRace,NSESS:NSESS,planSpan:planSpan,newRaceDraft:newRaceDraft,raceFormHtml:raceFormHtml,saveRace:saveRace,applyAway:applyAway,adaptFields:adaptFields,estKm:estKm,detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
+window.IM={fm:fm,fh:fh,hms:hms,PHASES:PHASES,BLOCKS:BLOCKS,KINDS:KINDS,T_TAPER:T_TAPER,stepOps:stepOps,VIEWS:VIEWS,openWiz:openWiz,gatePreview:function(c){pubCfg=c;renderGate();},gateNeeded:gateNeeded,acctLogin:acctLogin,catSearch:catSearch,wtResults:wtResults,wtFormat:wtFormat,pickRace:pickRace,NSESS:NSESS,planSpan:planSpan,newRaceDraft:newRaceDraft,raceFormHtml:raceFormHtml,saveRace:saveRace,applyAway:applyAway,adaptFields:adaptFields,estKm:estKm,detailBody:detailBody,wkBlocks:wkBlocks,pushSession:pushSession,pushPreview:pushPreview,clearPreview:clearPreview,wkText:wkText,evOf:evOf,ALLS:ALLS,tx:tx,autoProf:autoProf,estRace:estRace,estAll:estAll,raceParams:raceParams,PLAN:PLAN,stats:stats,status:status,computeLinks:computeLinks,links:function(){return LK;},state:state,actSport:actSport};
 applyAway();
 try{
   if(RCFG.migrate&&!state.ui.seen){state.ui.seen=1;save();}

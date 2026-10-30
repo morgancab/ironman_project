@@ -23,6 +23,8 @@ jobs:
         id: run
         continue-on-error: true   # une source en échec ne doit pas bloquer les autres changements
         run: node scripts/update-races.mjs --report "$RUNNER_TEMP/report.md"
+      - name: Vérifier le catalogue et les plans
+        run: node --test "tests/*.test.mjs"
       - name: Publier ou proposer
         env:
           GH_TOKEN: ${{ github.token }}

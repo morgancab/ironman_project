@@ -16,8 +16,9 @@ Tu n'as rien à faire. Si le catalogue change, le robot fait un commit sur `main
 
 Le rapport du lancement (courses ajoutées, dates, désaccords) se lit dans l'onglet **Actions**, sur le lancement concerné.
 
-**Trois garde-fous restent automatiques :**
+**Quatre garde-fous restent automatiques :**
 - **Contrôle du fichier :** un catalogue invalide, ou plus court qu'avant, n'est jamais écrit. Le lancement passe au rouge.
+- **Tests automatiques :** si le nouveau catalogue fait échouer un test, rien n'est publié.
 - **Lancement anormal :** plus de 50 nouvelles courses ou plus de 10 dates remplacées d'un coup, c'est le signe d'un site modifié ou d'une mauvaise lecture. Une proposition s'ouvre au lieu de publier, et les lancements suivants attendent qu'elle soit traitée.
 - **Désaccord entre sources :** la date du catalogue ne change pas, et le désaccord figure dans le rapport.
 
