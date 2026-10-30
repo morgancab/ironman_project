@@ -1,0 +1,58 @@
+# Met à jour le catalogue de triathlons (races.js) : publication directe si le changement est sans risque, sinon proposition à valider. Voir CATALOGUE.md.
+name: Mise à jour du catalogue
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # chaque lundi à 6 h UTC
+  workflow_dispatch:      # lancement à la main : onglet Actions > Run workflow
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Relire les calendriers
+        id: run
+        continue-on-error: true   # une source en échec ne doit pas bloquer les autres changements
+        run: node scripts/update-races.mjs --report "$RUNNER_TEMP/report.md"
+      - name: Publier ou proposer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- races.js; then
+            echo "Aucun changement dans le catalogue."
+            exit 0
+          fi
+          git config user.name "catalogue-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          OPEN="$(gh pr list --head bot/catalogue --state open --json number --jq length)"
+          if [ "${{ steps.run.outputs.safe }}" = "true" ] && [ "$OPEN" = "0" ]; then
+            git add races.js
+            git commit -m "Catalogue : mise à jour automatique"
+            git push origin HEAD:${{ github.event.repository.default_branch }}
+            cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git checkout -B bot/catalogue
+          git add races.js
+          git commit -m "Catalogue : mise à jour automatique"
+          git push --force origin bot/catalogue
+          if [ "$OPEN" = "0" ]; then
+            gh pr create --head bot/catalogue --title "Catalogue : mise à jour automatique" --body-file "$RUNNER_TEMP/report.md"
+          else
+            gh pr edit bot/catalogue --body-file "$RUNNER_TEMP/report.md"
+          fi
+      - name: Prévenir si une source ne répond plus
+        if: steps.run.outcome == 'failure'
+        run: |
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Au moins une source de calendrier est en échec : voir le résumé."
+          exit 1

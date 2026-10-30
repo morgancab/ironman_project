@@ -274,6 +274,10 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .mi.t-purple,.sheet .fold summary .mi.t-purple{background:rgba(191,90,242,.18);color:#d29af7}
 .mi.t-red,.sheet .fold summary .mi.t-red{background:rgba(255,69,58,.18);color:#ff7f77}
 .mi.t-grey,.sheet .fold summary .mi.t-grey{background:rgba(142,142,147,.18);color:#c7c7cc}
+.mkst{position:absolute;top:2px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#ff9f0a;box-shadow:0 0 0 2px #1c1c1e}
+.wkst{display:flex!important;align-items:center;gap:4px;color:#ffb84d!important;font-weight:600}
+.c-del,.dstat b.c-del{color:#ff6b61}
+.c-mod,.dstat b.c-mod{color:#ff9f0a}
 .plan-note{margin:12px 0 0;font-size:13px;color:var(--t2)}
 .phd{border-top:.5px solid var(--sep)}
 .phd:first-of-type{border-top:0}
@@ -534,15 +538,15 @@ h1{font-size:32px;letter-spacing:-.035em}
 @keyframes slideL{from{opacity:.2;transform:translateX(36px)}to{opacity:1;transform:none}}
 @keyframes slideR{from{opacity:.2;transform:translateX(-36px)}to{opacity:1;transform:none}}
 /* mode vacances / week-end */
-.mc.adp{background:rgba(255,214,10,.15);color:#ffd60a}
-.adp-n{background:rgba(255,214,10,.08)!important}
-.adp-n>b{color:#ffd60a!important}
+.mc.adp{background:rgba(255,159,10,.16);color:#ff9f0a}
+.adp-n{background:rgba(255,159,10,.09)!important}
+.adp-n>b{color:#ff9f0a!important}
 .arow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--sep);font-size:13.5px;line-height:1.35}
 .arow:last-child{border-bottom:0}
 .arow .ad{flex:none;width:52px;color:var(--t2);font-size:12px;font-weight:700;padding-top:1px}
 .arow .ar{flex:1;min-width:0}
-.mvto{margin-top:4px;color:#ffd60a;font-size:13px}
-.mvto b{color:#ffd60a;font-weight:700}
+.mvto{margin-top:4px;color:#ff9f0a;font-size:13px}
+.mvto b{color:#ff9f0a;font-weight:700}
 .arow s{color:var(--t3);text-decoration-color:rgba(255,255,255,.3)}
 .arow b{font-weight:650}
 /* calendrier de période */
@@ -730,6 +734,7 @@ body.setup #view{padding-bottom:40px}
 <div id="toast" role="status"></div>
 <div id="tip" role="tooltip"></div>
 
+<script src="races.js"></script>
 <script>
 'use strict';
 (function(){
@@ -1491,6 +1496,7 @@ function openSheetByKey(k){
   else if(n==='away')openAwayList();
   else if(n==='acts')openAllActs();
   else if(n==='level')openLevel();
+  else if(n==='steps')openSteps();
   else if(n==='act')openActDetail(v);
   else if(n==='assoc')openPickSess(v);
   else if(n==='link')openPickAct(v);
@@ -1571,6 +1577,7 @@ function vHome(){
   h+='<header class="top"><div class="top-t"><div class="eyebrow">'+esc(fmtLong(today()))+'</div><h1>'+(first?'Bonjour '+esc(first):'Accueil')+'</h1></div><button class="iconbtn" data-act="settings" aria-label="Réglages et sauvegarde">'+ic('gear',22)+'</button></header>';
   h+=heroHtml(st);
   if(st.s==='during')h+='<p class="hline"><b>Semaine '+st.w+' sur '+NW+'</b> · '+esc(cur.ph.n)+(cur.kind==='rec'?' · semaine plus légère pour récupérer':cur.kind==='taper'?' · on baisse le volume avant la course':'')+'</p>';
+  var nxs=nextStep();if(nxs){var nxd=diffDays(parseYmd(nxs.date),today());h+='<p class="hline"><b>Prochaine course : '+esc(nxs.name)+'</b> · '+(nxd?'J-'+nxd:'aujourd’hui')+'</p>';}
   // installation iOS
   var ios=/iphone|ipad|ipod/i.test(navigator.userAgent||'');
   if(!isStandalone()&&!state.ui.hideInstall){
@@ -1602,7 +1609,7 @@ function vMore(){
     '<button class="mhero" data-act="tab" data-tab="plan"><span class="mh-top"><span class="eyebrow">Ma course</span>'+(rd>=0?'<span class="mh-j">J-'+rd+'</span>':'')+'</span><b class="mh-n">'+esc(RNAME)+'</b>'+
       '<span class="mh-s">'+esc(fmtLong(RACE_DATE))+' · '+FMT.n+'</span>'+bar(pct(t.d,t.n))+
       '<span class="mh-f"><span>'+t.d+' / '+t.n+' séances</span><span class="mh-l">Voir mon plan de '+NW+' semaines'+ic('right',16)+'</span></span></button>'+
-    grp('Mon entraînement',mrow('week','Vacances & week-ends',aw?aw+' période'+(aw>1?'s':'')+' enregistrée'+(aw>1?'s':''):'Alléger le plan pendant une absence','awaylist','','green')+(lvOffered()?mrow('chart','Mon niveau',lvAny()?'Modifier mes temps de référence':'Estimer mes allures en 3 questions','level','','orange'):''))+
+    grp('Mon entraînement',mrow('race','Mes courses',stepList().length?stepList().length+' course'+(stepList().length>1?'s':'')+' intermédiaire'+(stepList().length>1?'s':''):'Ajouter une course intermédiaire','steps','','red')+mrow('week','Vacances & week-ends',aw?aw+' période'+(aw>1?'s':'')+' enregistrée'+(aw>1?'s':''):'Alléger le plan pendant une absence','awaylist','','green')+(lvOffered()?mrow('chart','Mon niveau',lvAny()?'Modifier mes temps de référence':'Estimer mes allures en 3 questions','level','','orange'):''))+
     grp('L’app',mrow('gear','Réglages','Garmin, compte, sauvegarde','settings','','blue')+mrow('share','Partager l’app','Envoyer le lien à un ami','shareapp','','purple'))+
     (acct()&&acct().admin?grp('Propriétaire',mrow('chart','Suivi de l’app','Utilisateurs, courses, progression','tab','data-tab="admin"','grey')):'')+
     '<div style="text-align:center;margin:6px 0 4px"><button class="lnk" data-act="legal" style="margin:0;color:var(--t3)">Mentions légales et confidentialité</button></div>';
@@ -1634,7 +1641,7 @@ function durTxt(n,u){return u==='m'?(n<60?n+' min':fm(n)):u==='s'?n+' s':u==='mt
    Une période (dates + intensité + matériel dispo) remplace, pendant ces jours, chaque séance par sa variante « récupération »
    générée par les mêmes constructeurs que le plan (mêmes cibles, même envoi Garmin, même rapprochement). Les séances sont modifiées
    sur place ; s.orig garde l'original pour revenir en arrière à tout moment. La semaine de course n'est jamais modifiée. */
-var AWAY_F={light:0.7,min:0.4},AWAY_N={same:'Identique',light:'Allégé',min:'Minimum',off:'Repos'},awayDraft=null;
+var AWAY_F={light:0.7,min:0.4},AWAY_N={same:'Identique',light:'Allégé',min:'Minimum',off:'Repos',eve:'Veille de course'},awayDraft=null;
 function r5(n){return Math.round(n/5)*5;}
 function awayRun(w,ph,min,f){return runMid(w,'rec',ph,Math.max(20,Math.min(60,r5(min*f*0.6))));}
 // la séance est-elle faisable sur place (matériel dispo, pas en repos) ?
@@ -1716,8 +1723,239 @@ function moveSess(s,to,from,p){
   s.w=Math.floor(to/7)+1;s.d=to%7;gday(to).push(s);
   s.moved={from:from,pid:p.id,label:p.label};
 }
-// skip : identifiant d'une période à ignorer (aperçu en cours de modification)
-function applyAway(skip){
+/* ---------- Courses intermédiaires ----------
+   L'objectif reste la course principale. Chaque étape (state.ui.steps) remplace les séances de son jour et allège les jours autour, par-dessus le plan :
+   supprimer l'étape rétablit tout. Les jours antérieurs à son ajout ne sont pas modifiés, pour ne pas réécrire ce qui a déjà été fait.
+   Étape : {id, name, city, kind:'tri'|'run'|'bike'|'swim', format (tri), distM (autres), date, prio:'prep'|'key', added}.
+   Catalogue une discipline : [nom, ville, pays, discipline, distance en m (0 = variable), mois habituel, options]. Comme pour RACE_CAT, surtout un MOIS
+   habituel : l'utilisateur choisit le jour exact après vérification sur le site officiel. */
+var STEP_CAT=[
+  ['Semi-marathon de Paris','Paris','FR','run',21097,3,{date:'2027-03-07'}],
+  ['Marathon de Paris','Paris','FR','run',42195,4,{date:'2027-04-04'}],
+  ['Marseille-Cassis','Marseille','FR','run',20000,10],
+  ['Marathon Nice-Cannes','Nice','FR','run',42195,11],
+  ['Run In Lyon · Marathon','Lyon','FR','run',42195,10],
+  ['Run In Lyon · Semi-marathon','Lyon','FR','run',21097,10],
+  ['Marathon des quais de Bordeaux','Bordeaux','FR','run',42195,11],
+  ['Semi-marathon des quais de Bordeaux','Bordeaux','FR','run',21097,11],
+  ['Reims Champagne Run · Semi-marathon','Reims','FR','run',21097,10],
+  ['Marathon du Médoc','Pauillac','FR','run',42195,9],
+  ['Marathon de La Rochelle','La Rochelle','FR','run',42195,11],
+  ['Marathon d’Annecy','Annecy','FR','run',42195,4],
+  ['Marathon de Tokyo','Tokyo','JP','run',42195,3],
+  ['Marathon de Boston','Boston','US','run',42195,4],
+  ['Marathon de Londres','Londres','GB','run',42195,4],
+  ['Marathon du Cap','Le Cap','ZA','run',42195,5],
+  ['Marathon de Sydney','Sydney','AU','run',42195,8],
+  ['Marathon de Berlin','Berlin','DE','run',42195,9],
+  ['Marathon de Chicago','Chicago','US','run',42195,10],
+  ['Marathon de New York','New York','US','run',42195,11],
+  ['Marathon de Valence','Valence','ES','run',42195,12],
+  ['Marathon d’Amsterdam','Amsterdam','NL','run',42195,10],
+  ['Marathon de Rome','Rome','IT','run',42195,3],
+  ['L’Étape du Tour','Parcours variable','FR','bike',0,7],
+  ['La Marmotte Granfondo des Alpes','Le Bourg-d’Oisans','FR','bike',174000,6],
+  ['L’Ardéchoise','Saint-Félicien','FR','bike',0,6],
+  ['GF Mont Ventoux','Vaison-la-Romaine','FR','bike',135000,6],
+  ['Maratona dles Dolomites','Corvara','IT','bike',138000,7],
+  ['Paris-Roubaix Challenge','Roubaix','FR','bike',0,4],
+  ['Tour des Flandres Cyclo','Audenarde','BE','bike',0,4],
+  ['Open Swim Paris','Paris','FR','swim',5000,7],
+  ['Open Swim Lyon','Lyon','FR','swim',5000,9],
+  ['Open Swim Agde','Agde','FR','swim',1300,6],
+  ['EDF Aqua Challenge Nice','Nice','FR','swim',10000,9],
+  ['NAPO Swim Cup','Ajaccio','FR','swim',5000,8],
+  ['Défi de Monte-Cristo','Marseille','FR','swim',5000,6],
+  ['Traversée du lac d’Annecy','Annecy','FR','swim',0,8]
+];
+var STEP_K={tri:'Triathlon',run:'Course à pied',bike:'Vélo',swim:'Natation'},STEP_ICO={tri:'race',run:'run',bike:'bike',swim:'swim'},STEP_P={prep:'Préparation',key:'Importante'};
+var STEP_PRE={prep:[1,2,2],key:[5,7,10]},STEP_POST={prep:[1,2,2],key:[3,4,7]},stepDraft=null,stepQT=null,stepQS=0;
+function stepList(){return state.ui.steps||[];}
+function stepDist(st){return st.kind==='tri'?(FORMATS[st.format]||FORMATS.olympic).n:st.distM?STEP_K[st.kind]+' · '+fk(st.distM)+' km':STEP_K[st.kind];}
+// taille de l'effort : 0 court, 1 moyen, 2 long (la durée d'allègement et de récupération en dépend)
+function stepClass(st){
+  if(st.kind==='tri')return ({sprint:0,olympic:1,half:2,full:2})[st.format]||1;
+  var m=st.distM||0,l=({run:[10500,30000],bike:[60000,120000],swim:[3000,6000]})[st.kind];
+  return !m?1:m<=l[0]?0:m<=l[1]?1:2;
+}
+// Avant : veille = activation seulement, avant-veille = minimum, puis allégé. Après : repos (sauf effort court en préparation), minimum, puis allégé.
+function stepModes(st){
+  var g0=idxOfDate(parseYmd(st.date)),c=stepClass(st),key=st.prio==='key',add=st.added?idxOfDate(parseYmd(st.added)):-1e9,o={},i;
+  for(i=1;i<=STEP_PRE[st.prio][c];i++)if(g0-i>=add)o[g0-i]=i===1?'eve':i===2?'min':'light';
+  for(i=1;i<=STEP_POST[st.prio][c];i++)if(g0+i>=add)o[g0+i]=i===1?((key||c>0)?'off':'min'):i===2?'min':'light';
+  return o;
+}
+// Version adaptée d'une séance : plafonnée en durée, car un pourcentage d'une très longue sortie reste trop long près d'une course
+var STEP_CAP={light:{bike:150,run:75},min:{bike:60,run:40}},STEP_RANK={light:1,min:2,eve:3,off:4};
+function stepAdapt(src,mode){
+  if(mode==='off'||(mode==='min'&&(src.sp==='brick'||src.sp==='str')))return restDay(src.w);
+  var nf=adaptFields(src,{mode:mode,pool:true,bike:true});if(!nf)return null;
+  var cap=(STEP_CAP[mode]||{})[nf.sp],pw=src.w;
+  if(cap&&nf.min>cap)nf=(nf.sp==='bike'?bikeMid:runMid)(REFW[pw-1]||pw,'rec',phaseOf(pw).k,cap);
+  return nf;
+}
+function stepActivation(){
+  return S('run','Course · Activation','Veille de course',20,['15 min de footing très facile {r:soft}','4 × 20 s de lignes droites relâchées, récup 1 min','Pas plus : garde tes jambes pour demain. Prépare ton matériel et dors bien'],{sum:'20 min facile + 4 lignes droites',goal:'Réveiller les jambes sans fatiguer. Tu peux aussi la remplacer par du repos.',wk:WK(['Main','- 15m {R:soft}','- 5m {R:z2}'])});
+}
+function stepInPlan(st){var d=parseYmd(st.date);if(!d)return false;var g=idxOfDate(d);return g>=0&&g<(NW-1)*7;}
+// Ce que l'étape change, sans rien modifier
+function stepOps(st){
+  if(!stepInPlan(st))return null;
+  var g0=idxOfDate(parseYmd(st.date)),m=stepModes(st),ops=[];
+  gday(g0).forEach(function(s){var src=awaySrc(s);if(src.sp!=='rest'&&src.sp!=='race')ops.push({g:g0,s:s,src:src,race:true,nf:restDay(src.w),mode:'off'});});
+  Object.keys(m).map(Number).sort(function(a,b){return a-b;}).forEach(function(g){
+    if(g<0||g>=(NW-1)*7)return;
+    gday(g).forEach(function(s){
+      var src=awaySrc(s);if(src.sp==='rest'||src.sp==='race')return;
+      if(m[g]==='eve'){
+        var act=st.kind!=='swim'&&!ops.some(function(o){return o.g===g&&o.mode==='eve';});
+        ops.push(act?{g:g,s:s,src:src,nf:stepActivation(),mode:'eve'}:{g:g,s:s,src:src,nf:restDay(src.w),mode:'off'});
+        return;
+      }
+      var nf=stepAdapt(src,m[g]);
+      if(nf)ops.push({g:g,s:s,src:src,nf:nf,mode:m[g]});
+    });
+  });
+  return ops.sort(function(x,y){return x.g-y.g;});
+}
+function stepSess(st){
+  var g=idxOfDate(parseYmd(st.date)),key=st.prio==='key';
+  var s=S('race',st.name,key?'Importante':'Préparation',0,key?['Échauffe-toi progressivement, puis pars à une allure que tu peux tenir jusqu’au bout','Utilise la nutrition et le matériel prévus pour ta course principale','Note tes sensations : elles aideront à ajuster la fin de ta préparation']:['Prends-la comme une séance de qualité : teste ton matériel, ta nutrition et ton allure','Inutile de tout donner : l’objectif reste ta course principale','Rien de nouveau le jour J : garde ce que tu as déjà éprouvé à l’entraînement'],{sum:stepDist(st),goal:key?'Réussir cette course, avec ton objectif principal en tête.':'Te tester sans entamer ta préparation.',tip:'Les jours suivants sont allégés pour récupérer.'});
+  s.id='st.'+st.id;s.w=Math.floor(g/7)+1;s.d=g%7;s.step=st.id;SBY[s.id]=s;
+  return s;
+}
+function applySteps(skip){
+  var list=stepList().filter(function(st){return st.id!==skip&&stepInPlan(st);}).sort(function(a,b){return a.date<b.date?-1:1;});
+  list.forEach(function(st){
+    (stepOps(st)||[]).forEach(function(op){
+      var s=op.s;if(s.adapt&&s.adapt.step&&STEP_RANK[s.adapt.mode]>=STEP_RANK[op.mode])return;   // si deux courses se suivent, la version la plus légère l'emporte
+      var snap=s.orig||copySess(s),id=snap.id,w=s.w,d=s.d,mv=s.moved;
+      Object.keys(s).forEach(function(k){delete s[k];});
+      Object.assign(s,op.nf,{id:id,w:w,d:d,orig:snap,adapt:{mode:op.mode,label:st.name,pid:st.id,step:true}});
+      if(mv)s.moved=mv;
+    });
+  });
+  list.forEach(function(st){
+    Object.keys(stepModes(st)).map(Number).forEach(function(g){      // une séance retirée ne laisse pas de carte « Repos » en double
+      if(g<0||g>=(NW-1)*7)return;
+      var arr=gday(g),keep=arr.filter(function(x){return x.sp!=='rest';});
+      if(!keep.length)keep=arr.slice(0,1);
+      arr.splice(0,arr.length);keep.forEach(function(x){arr.push(x);});
+    });
+  });
+  list.forEach(function(st){var arr=gday(idxOfDate(parseYmd(st.date)));arr.splice(0,arr.length,stepSess(st));});
+}
+function stepsOfWeek(n){return stepList().filter(function(st){return stepInPlan(st)&&Math.floor(idxOfDate(parseYmd(st.date))/7)+1===n;});}
+function nextStep(){var t=isoDate(today());return stepList().filter(function(st){return st.date>=t&&stepInPlan(st);}).sort(function(a,b){return a.date<b.date?-1:1;})[0]||null;}
+function stepSearch(q){
+  var n=normS(q),tk=n.split(' ').filter(function(t){return t.length>1;}),out=[];
+  if(n.length<2)return out;
+  STEP_CAT.forEach(function(e){
+    var hay=normS(e[0]+' '+e[1]+' '+(CC_NAMES[e[2]]||e[2])+' '+({run:'course pied running marathon',bike:'velo cyclosportive granfondo',swim:'natation eau libre traversee'})[e[3]]);
+    if(tk.every(function(t){return hay.indexOf(t)>=0;}))out.push({src:'cat',name:e[0],city:e[1],cc:e[2],kind:e[3],distM:e[4],month:e[5],date:(e[6]&&e[6].date)||''});
+  });
+  return out.concat(catSearch(q).map(function(r){return Object.assign({},r,{kind:'tri'});})).slice(0,12);
+}
+function stepBounds(){var mn=today();if(PLAN_START>mn)mn=PLAN_START;return {min:mn,max:addDays(PLAN[NW-1].start,-1)};}
+function stepNew(){
+  var b=stepBounds(),c=b.min;
+  return {id:'',name:'',city:'',kind:'run',format:'olympic',distKm:'',date:'',prio:'prep',added:isoDate(today()),q:'',res:[],hint:'',cal:{y:c.getFullYear(),m:c.getMonth()}};
+}
+function stepFromDraft(d){
+  var km=parseFloat(String(d.distKm).replace(',','.')),o={id:d.id||('s'+Date.now()),name:String(d.name||'').trim(),city:d.city||'',kind:d.kind,date:d.date,prio:d.prio,added:d.added};
+  if(d.kind==='tri')o.format=d.format;else o.distM=km>0?Math.round(km*1000):0;
+  return o;
+}
+function stepResHtml(d){
+  if(!d.q||normS(d.q).length<2)return '';
+  if(!d.res.length)return '<p class="small muted" style="margin:8px 0 0">'+(d.load?'Recherche…':'Aucune course trouvée : saisis-la toi-même ci-dessous.')+'</p>';
+  return '<div class="rres">'+d.res.map(function(r,i){
+    var loc=[r.city,CC_NAMES[r.cc]||r.cc].filter(Boolean).join(' · '),when=r.date?fmtLong(parseISO(r.date)):(r.month?'habituellement en '+MONTHS_L[r.month-1]:''),what=r.kind==='tri'?FORMATS[r.format].n:stepDist(r);
+    return '<button class="rr" data-act="steppick" data-i="'+i+'"><span class="t"><b>'+esc(r.name)+'</b><small>'+esc(loc)+(loc&&when?' · ':'')+esc(when)+' · '+esc(what)+'</small></span><span class="tag'+(r.src==='wt'?' wt':'')+'">'+(r.src==='wt'?'World Triathlon':'Catalogue')+'</span></button>';
+  }).join('')+'</div>';
+}
+function stepPick(r){
+  var d=stepDraft,b=stepBounds();if(!d||!r)return;
+  track('race_pick',r.name);
+  d.name=r.name;d.city=r.city||'';d.kind=r.kind;d.q='';d.res=[];d.date='';d.hint='';
+  if(r.kind==='tri')d.format=r.format;else d.distKm=r.distM?String(r.distM/1000).replace('.',','):'';
+  var rd=r.date?parseISO(r.date):null;
+  if(rd&&rd>=b.min&&rd<=b.max){d.date=r.date;d.cal={y:rd.getFullYear(),m:rd.getMonth()};d.hint='Date à reconfirmer à l’inscription.';}
+  else if(r.month){
+    var y=b.min.getFullYear();if(new Date(y,r.month,0)<b.min)y++;
+    d.cal={y:y,m:r.month-1};
+    d.hint=new Date(y,r.month-1,1)>b.max?'Cette course a lieu habituellement en '+MONTHS_L[r.month-1]+', après la fin de ta préparation.':'Date habituelle : '+MONTHS_L[r.month-1]+'. Choisis le jour exact (à confirmer sur le site officiel).';
+  }else d.hint='Date non connue : cherche-la sur le site officiel, puis choisis le jour exact.';
+  if(!r.distM&&r.kind!=='tri')d.hint+=' Le parcours change selon les éditions : indique la distance.';
+  renderStep();
+}
+function stepPvHtml(d){
+  if(!d.date)return '<p class="small muted" style="margin:0">Choisis la date pour voir ce qui change dans ton plan.</p>';
+  var st=stepFromDraft(d);
+  if(!stepInPlan(st))return '<p class="small muted" style="margin:0">Cette date est en dehors de ton plan : il ne sera pas modifié.</p>';
+  applyAway(null,st.id);
+  var ops=stepOps(st)||[],nr=ops.filter(function(o){return o.race;}).length,nd=ops.filter(function(o){return !o.race&&o.nf.sp==='rest';}).length,na=ops.length-nr-nd,left=diffDays(RACE_DATE,parseYmd(d.date));
+  var dn=function(x){return DAYS[(x.getDay()+6)%7].slice(0,3)+' '+dnum(x);},h='';
+  h+='<div class="dh"><span>Aperçu</span><span class="dstat"><b class="c-del">'+(nr+nd)+' supprimée'+(nr+nd>1?'s':'')+'</b> · <b class="c-mod">'+na+' modifiée'+(na>1?'s':'')+'</b></span></div>';
+  if(left<21)h+='<p class="small" style="margin:0 0 8px;color:#ffd60a">Cette course a lieu '+left+' jours avant ta course principale : cela peut nuire à ton objectif.</p>';
+  var aw=awayList().filter(function(p){return p.from<=d.date&&p.to>=d.date;})[0];
+  if(aw)h+='<p class="small muted" style="margin:0 0 8px">Pendant « '+esc(aw.label)+' » : la course passe avant.</p>';
+  if(!ops.length)h+='<p class="small muted" style="margin:0">Aucune séance modifiée sur ces dates.</p>';
+  ops.forEach(function(o){h+='<div class="arow"><span class="ad">'+dn(addDays(PLAN_START,o.g))+'</span><span class="ar"><s>'+awayLine(o.src)+'</s><br><b class="'+(o.race||o.nf.sp==='rest'?'c-del':'c-mod')+'">'+(o.race?'Remplacée par la course':o.nf.sp==='rest'?'Supprimée (repos)':awayLine(o.nf))+'</b></span></div>';});
+  applyAway();
+  return h;
+}
+function renderStep(){
+  var d=stepDraft,sh=document.getElementById('sheet'),st=sh.scrollTop,b=stepBounds();
+  var seg=function(act,key,opts){return '<div class="rng" role="group">'+opts.map(function(o){return '<button data-act="'+act+'" data-v="'+o[0]+'" aria-pressed="'+(d[key]===o[0])+'">'+o[1]+'</button>';}).join('')+'</div>';};
+  var h=(d.id?'':'<div class="eyebrow" style="margin:0 0 8px">Trouve ta course</div><input class="tinp" id="st-q" maxlength="60" autocomplete="off" placeholder="Nom, ville ou discipline (ex. marathon, Lyon)" value="'+esc(d.q||'')+'"><div id="st-res">'+stepResHtml(d)+'</div>')+
+    '<div class="eyebrow" style="margin:18px 0 8px">Nom de la course</div><input class="tinp" id="st-name" maxlength="60" autocomplete="off" placeholder="Ex. Semi-marathon de Nantes" value="'+esc(d.name||'')+'">'+
+    '<div class="eyebrow" style="margin:18px 0 8px">Discipline</div>'+seg('stepkind','kind',[['run','Course'],['bike','Vélo'],['swim','Natation'],['tri','Triathlon']]);
+  if(d.kind==='tri')h+=seg('stepfmt','format',[['sprint','Sprint'],['olympic','Olympique'],['half','70.3'],['full','Complet']]);
+  else h+='<label class="inp" style="margin-top:8px"><span>Distance<small>km</small></span><input id="st-dist" inputmode="decimal" autocomplete="off" placeholder="'+({run:'10',bike:'100',swim:'2'})[d.kind]+'" value="'+esc(d.distKm||'')+'"></label>';
+  h+='<div class="eyebrow" style="margin:18px 0 8px">Date</div>'+(d.hint?'<p class="small muted" style="margin:0 0 8px">'+esc(d.hint)+'</p>':'')+
+    (b.min>b.max?'<p class="small muted" style="margin:0">Plus de date disponible avant la semaine de ta course principale.</p>':calHtml('step',d.date,d.date,b.min,b.max,d.cal.y,d.cal.m))+
+    '<div class="eyebrow" style="margin:18px 0 8px">Importance</div>'+seg('stepprio','prio',[['prep','Préparation'],['key','Importante']])+
+    '<p class="small muted" style="margin:8px 0 0">'+(d.prio==='key'?'Une course que tu veux réussir : plusieurs jours allégés avant, activation seule la veille, repos le lendemain.':'Un test ou un plaisir : activation seule la veille, puis 1 ou 2 jours de récupération.')+'</p>'+
+    '<div class="card ad-ch" id="st-pv" style="margin:18px 0 14px">'+stepPvHtml(d)+'</div>'+
+    '<button class="btn pri" data-act="stepsave" style="margin:0 0 10px">'+(d.id?'Enregistrer':'Ajouter la course')+'</button>'+(d.id?'<button class="btn dng" data-act="stepdel">Supprimer la course</button>':'<button class="btn" data-act="steps">Annuler</button>');
+  showSheet(d.id?'Modifier la course':'Ajouter une course','Ton plan s’adapte, ton objectif principal ne change pas',h);
+  sh.scrollTop=st;
+}
+function openStepEdit(id){
+  var st=stepList().filter(function(x){return x.id===id;})[0];if(!st)return;
+  var dt=parseYmd(st.date)||stepBounds().min;
+  stepDraft=Object.assign({},st,{format:st.format||'olympic',distKm:st.distM?String(st.distM/1000).replace('.',','):'',q:'',res:[],hint:'',cal:{y:dt.getFullYear(),m:dt.getMonth()}});
+  renderStep();
+}
+function saveStep(){
+  var d=stepDraft,o=stepFromDraft(d),list=state.ui.steps=stepList().slice(),i,done=false;
+  if(!o.name){toast('Indique le nom de la course');return;}
+  if(!o.date){toast('Choisis la date de la course');return;}
+  for(i=0;i<list.length;i++)if(list[i].id===o.id){list[i]=o;done=true;}
+  if(!done)list.push(o);
+  applyAway();save();stepDraft=null;render(true);openSteps();toast(o.name+' : plan adapté');
+}
+function delStep(){
+  var d=stepDraft;if(!d||!d.id)return;
+  if(!confirm('Supprimer cette course et rétablir les séances d’origine ?'))return;
+  state.ui.steps=stepList().filter(function(x){return x.id!==d.id;});
+  delete state.done['st.'+d.id];delete SBY['st.'+d.id];
+  applyAway();save();stepDraft=null;render(true);openSteps();toast('Plan rétabli');
+}
+function openSteps(){
+  var list=stepList().slice().sort(function(a,b){return a.date<b.date?-1:1;}),b='<div class="eyebrow" style="margin:0 0 8px">Objectif principal</div><div class="srow" style="cursor:default"><span class="sr-t"><b>'+esc(RNAME)+'</b><small>'+esc(fmtLong(RACE_DATE))+' · '+FMT.n+'</small></span></div>';
+  b+='<div class="eyebrow" style="margin:18px 0 8px">Étapes</div>';
+  if(!list.length)b+='<p class="muted" style="margin:0 0 4px">Aucune pour l’instant. Ajoute un 10 km, une cyclosportive ou un autre triathlon : le plan s’allège autour de la course.</p>';
+  list.forEach(function(st){
+    var d=parseYmd(st.date);
+    b+='<button class="srow" data-act="stepedit" data-id="'+esc(st.id)+'"><span class="sr-t"><b>'+esc(st.name)+'</b><small>'+esc((d?fmtDay(d)+' '+d.getFullYear():'')+' · '+stepDist(st))+'</small></span><span class="sr-b'+(st.prio==='key'?' ok':'')+'">'+(stepInPlan(st)?STEP_P[st.prio]:'Hors plan')+'</span></button>';
+  });
+  b+='<button class="btn pri" data-act="stepnew" style="margin-top:12px">Ajouter une course</button>';
+  showSheet('Mes courses','Ton objectif et tes étapes',b);sheetRoute('steps');
+}
+// skip : identifiant d'une période à ignorer (aperçu en cours de modification) ; skipStep : pareil pour une course intermédiaire
+function applyAway(skip,skipStep){
   PLAN.forEach(function(wk){if(!wk.layout){wk.layout=wk.days.map(function(day){return day.sessions.slice();});wk.layout.forEach(function(l,i){l.forEach(function(s){ORIGPOS[s.id]={w:wk.n,d:i};});});}});
   ALLS.forEach(function(s){
     if(!s.orig)return;
@@ -1737,6 +1975,7 @@ function applyAway(skip){
       if(op.to!==null){var pos=ORIGPOS[s.id];moveSess(s,op.to,(pos.w-1)*7+pos.d,p);}
     });
   });
+  applySteps(skipStep);
   PLAN.forEach(function(wk){
     wk.min=0;wk.m=0;wk.count=0;
     wk.days.forEach(function(day){day.sessions.forEach(function(s){if(s.sp!=='rest'){wk.count++;wk.min+=s.min;wk.m+=s.m;}});});
@@ -1773,7 +2012,7 @@ function cloudKeys(code){
 function cloudBase(){return (state.ui&&state.ui.pubApi)||PUB_API;}
 function cloudPayload(){
   var u=state.ui||{};
-  return {app:'plan-triathlon',v:1,done:state.done,notes:state.notes,links:state.links,race:state.race||(SETUP?null:CFG),prof:u.prof||{},lv:u.lvl||{},away:u.away||[],rc:u.race||{}};
+  return {app:'plan-triathlon',v:1,done:state.done,notes:state.notes,links:state.links,race:state.race||(SETUP?null:CFG),prof:u.prof||{},lv:u.lvl||{},st:u.steps||[],away:u.away||[],rc:u.race||{}};
 }
 function cloudEncrypt(keys,obj){
   var iv=crypto.getRandomValues(new Uint8Array(12));
@@ -1817,7 +2056,7 @@ function cloudPush(loud){
 }
 function cloudApply(p){
   state.done=p.done||{};state.notes=p.notes||{};state.links=p.links||{};
-  state.ui.prof=p.prof||{};state.ui.lvl=p.lv||{};state.ui.away=p.away||[];state.ui.race=p.rc||{};
+  state.ui.prof=p.prof||{};state.ui.lvl=p.lv||{};state.ui.steps=p.st||[];state.ui.away=p.away||[];state.ui.race=p.rc||{};
   if(p.race&&p.race.date&&p.race.start)state.race=p.race;
 }
 // récupération (nouvel appareil ou restauration) : télécharge, déchiffre et remplace les données locales
@@ -2277,113 +2516,8 @@ function saveRace(){
    Grandes courses récurrentes : [nom, ville, pays, format, mois habituel (1-12), options]. On ne donne qu'un MOIS habituel (les dates changent chaque
    année) : l'utilisateur choisit le jour exact après vérification sur le site officiel. Les épreuves de la fédération internationale (dates exactes)
    viennent en plus de l'API World Triathlon, via le Worker (route /pub/races). Course absente : saisie libre. */
-var RACE_CAT=[
-  ['Ironman des Sables d’Olonne','Les Sables-d’Olonne','FR','full',6,{date:'2027-06-27',bikeM:178000,bikeUp:1334,runUp:200}],
-  ['Ironman France Nice','Nice','FR','full',9,{date:'2027-09-12',ff:1}],
-  ['Ironman Vichy','Vichy','FR','full',8,{date:'2027-08-22',ff:1}],
-  ['Ironman 70.3 Vichy','Vichy','FR','half',8],
-  ['Ironman 70.3 Aix-en-Provence','Aix-en-Provence','FR','half',5],
-  ['Ironman 70.3 Les Sables d’Olonne-Vendée','Les Sables-d’Olonne','FR','half',6,{date:'2027-06-26',note:'Date relevée dans un calendrier régional : à confirmer.'}],
-  ['Embrunman','Embrun','FR','full',8,{bikeM:188000,date:'2027-08-15',note:'Course disputée autour du 15 août chaque année : à confirmer à l’inscription.'}],
-  ['Challenge Roth','Roth','DE','full',7],
-  ['Ironman Frankfurt','Francfort','DE','full',6],
-  ['Ironman 70.3 Kraichgau','Kraichgau','DE','half',6],
-  ['Ironman Austria','Klagenfurt','AT','full',6],
-  ['Ironman 70.3 Zell am See-Kaprun','Zell am See','AT','half',8],
-  ['Ironman 70.3 Rapperswil-Jona','Rapperswil-Jona','CH','half',6],
-  ['Ironman Lanzarote','Lanzarote','ES','full',5],
-  ['Ironman Barcelona','Calella','ES','full',10],
-  ['Ironman 70.3 Barcelona','Calella','ES','half',10],
-  ['Ironman 70.3 Mallorca','Alcúdia','ES','half',5],
-  ['Ironman Vitoria-Gasteiz','Vitoria-Gasteiz','ES','full',7],
-  ['Ironman Italy Emilia-Romagna','Cervia','IT','full',9],
-  ['Ironman Wales','Tenby','GB','full',9],
-  ['Ironman 70.3 Staffordshire','Staffordshire','GB','half',6],
-  ['Challenge Almere-Amsterdam','Almere','NL','full',9],
-  ['Ironman Copenhagen','Copenhague','DK','full',8],
-  ['Ironman Sweden','Kalmar','SE','full',8],
-  ['Ironman Tallinn','Tallinn','EE','full',8],
-  ['Ironman World Championship','Kailua-Kona (Hawaï)','US','full',10],
-  ['Ironman Lake Placid','Lake Placid','US','full',7],
-  ['Ironman Texas','The Woodlands','US','full',4],
-  ['Ironman Arizona','Tempe','US','full',11],
-  ['Ironman Florida','Panama City Beach','US','full',11],
-  ['Ironman 70.3 Mont-Tremblant','Mont-Tremblant','CA','half',6],
-  ['Ironman Australia','Port Macquarie','AU','full',5],
-  ['Ironman Cairns','Cairns','AU','full',6],
-  ['Ironman Western Australia','Busselton','AU','full',12],
-  ['Ironman New Zealand','Taupō','NZ','full',3],
-  ['Ironman South Africa','Gqeberha','ZA','full',4],
-  ['Ironman Brazil','Florianópolis','BR','full',5],
-  ['Ironman Cozumel','Cozumel','MX','full',11],
-  // France : formats XXL (distance Ironman), L (70.3), M (olympique), S (sprint) — distances à confirmer sur le site officiel de chaque course
-  ['Bayman XXL','Mont-Saint-Michel (Manche)','FR','full',10,{note:'Natation, 2 boucles de vélo, course avec la montée du Mont.'}],
-  ['Bayman L','Mont-Saint-Michel (Manche)','FR','half',10],
-  ['Bayman M','Mont-Saint-Michel (Manche)','FR','olympic',10],
-  ['Frenchman Triathlon XXL','Carcans (Gironde)','FR','full',5,{date:'2027-05-08',ff:1,note:'Distances non confirmées : à vérifier sur le site de la course.'}],
-  ['Frenchman Triathlon L','Carcans (Gironde)','FR','half',5,{date:'2027-05-07',ff:1,note:'Distances non confirmées : à vérifier sur le site de la course.'}],
-  ['Vercorsman XL','Saint-Nazaire-en-Royans (Drôme)','FR','half',8,{sw:2200,bk:120000,rn:20000,note:'Vélo très vallonné (≈ 3 000 m de D+). Distances variables selon les sources.'}],
-  ['Vercorsman L','Saint-Nazaire-en-Royans (Drôme)','FR','half',8,{sw:2200,bk:80000,rn:20000,note:'Distances variables selon les sources.'}],
-  ['Vercorsman M','Saint-Nazaire-en-Royans (Drôme)','FR','olympic',8,{sw:1400,bk:57000,rn:10000,note:'Distances variables selon les sources.'}],
-  ['Vercorsman S','Saint-Nazaire-en-Royans (Drôme)','FR','sprint',8,{sw:750,bk:24000,rn:5500,note:'Distances variables selon les sources.'}],
-  ['Altriman XXL','Les Angles (Pyrénées-Orientales)','FR','full',7,{bk:193000,date:'2027-07-10',note:'Parcours de montagne (≈ 5 000 m de D+ à vélo). Festival du 9 au 11 juillet 2027 : à confirmer.'}],
-  ['Altriman L','Les Angles (Pyrénées-Orientales)','FR','half',7,{bk:102000}],
-  ['Altriman S','Les Angles (Pyrénées-Orientales)','FR','sprint',7,{bk:21000}],
-  ['Triathlon de l’Alpe d’Huez (format L)','Alpe d’Huez (Isère)','FR','half',7,{sw:2200,bk:118000,rn:20000,date:'2027-07-28',note:'Course de montagne (≈ 3 200 m de D+). Date relevée dans un calendrier : à confirmer.'}],
-  ['Triathlon de Gérardmer (XL)','Gérardmer (Vosges)','FR','half',9],
-  ['Triathlon de Gérardmer (olympique)','Gérardmer (Vosges)','FR','olympic',9],
-  ['Triathlon Deauville Normandie L','Deauville (Calvados)','FR','half',6,{note:'Édition 2027 annoncée vers le 19 juin : à confirmer.'}],
-  ['Triathlon Deauville Normandie M','Deauville (Calvados)','FR','olympic',6],
-  ['Triathlon de Quiberon','Quiberon (Morbihan)','FR','olympic',6,{note:'Date 2027 à confirmer.'}],
-  ['Triathlon d’Angers L','Écouflant, lac d’Angers (Maine-et-Loire)','FR','half',5,{note:'Vélo ≈ 700 m de D+. Date 2027 à confirmer (mai).'}],
-  ['Triathlon d’Angers M','Écouflant, lac d’Angers (Maine-et-Loire)','FR','olympic',5,{note:'Vélo ≈ 400 m de D+. Date 2027 à confirmer (mai).'}],
-  ['Triathlon d’Angers S','Écouflant, lac d’Angers (Maine-et-Loire)','FR','sprint',5],
-  ['POP Triathlon Mid Half','Lac de Guiche, près de Bayonne (Pyrénées-Atlantiques)','FR','olympic',5,{sw:1700,bk:48000,rn:16000,note:'Format intermédiaire entre olympique et 70.3. Date et distances à confirmer.'}],
-  ['POP Triathlon S','Lac de Guiche, près de Bayonne (Pyrénées-Atlantiques)','FR','sprint',5,{sw:850,bk:20000,rn:5000,note:'Date et distances à confirmer.'}],
-  ['Openlakes Champagne XXL','Sainte-Marie-du-Lac-Nuisement, lac du Der (Marne)','FR','full',6,{date:'2027-06-19',ff:1,note:'Série Openlakes.'}],
-  ['Openlakes Champagne L','Sainte-Marie-du-Lac-Nuisement, lac du Der (Marne)','FR','half',6,{note:'Série Openlakes. Date 2027 à confirmer (juin).'}],
-  ['Openlakes Champagne M','Sainte-Marie-du-Lac-Nuisement, lac du Der (Marne)','FR','olympic',6,{bk:42000,note:'Série Openlakes. Date 2027 à confirmer (juin).'}],
-  ['Openlakes Lyon Métropole','Vaulx-en-Velin (Rhône)','FR','half',5,{date:'2027-05-15',ff:1,note:'Série Openlakes, plusieurs formats : distances à vérifier.'}],
-  ['Openlakes Atlantique','Royan (Charente-Maritime)','FR','half',9,{note:'Série Openlakes, édition annoncée début septembre 2027 : formats à vérifier.'}],
-  ['Openlakes Belgium L','Belgique','BE','half',9,{bk:92000,note:'Série Openlakes. Date à confirmer (septembre).'}],
-  ['Triathlon de Bordeaux L','Bordeaux-Lac (Gironde)','FR','half',9],
-  ['Triathlon de Bordeaux S','Bordeaux-Lac (Gironde)','FR','sprint',9],
-  // Calendrier officiel FFTRI 2027 (dates exactes, ff:1) et autres courses relevées
-  ['EMBLEM Millau (XXL)','Millau (Aveyron)','FR','full',5,{date:'2027-05-29',ff:1}],
-  ['ChTriMan Gravelines (XXL)','Gravelines (Nord)','FR','full',6,{date:'2027-06-27',ff:1}],
-  ['Triathlon d’Évian (XXL)','Évian-les-Bains (Haute-Savoie)','FR','full',9,{date:'2027-09-11',ff:1}],
-  ['EMBLEM Saint-Cirq-Lapopie (XXL)','Saint-Cirq-Lapopie (Lot)','FR','full',9,{date:'2027-09-25',ff:1}],
-  ['Réunion Tri Tour (XXL)','Saint-Leu (La Réunion)','FR','full',9,{date:'2027-09-25',ff:1}],
-  ['Ironman 70.3 Tours Métropole – Vallée de la Loire','Tours (Indre-et-Loire)','FR','half',6,{date:'2027-06-06',note:'Date relevée dans un calendrier : à confirmer.'}],
-  ['Ironman 70.3 Versailles','Versailles (Yvelines)','FR','half',7,{note:'Date 2027 à confirmer (juillet).'}],
-  ['Aiguebeletteman','Lac d’Aiguebelette (Savoie)','FR','full',10,{note:'Annoncé comme distance Ironman : formats et date à vérifier.'}],
-  ['Triathlon du Lac d’Aiguebelette (L)','Lac d’Aiguebelette (Savoie)','FR','half',9,{sw:2500,bk:84000,rn:17300,note:'Distances de l’édition 2026 : à vérifier.'}],
-  ['AlpsMan','Lac d’Annecy (Haute-Savoie)','FR','full',0,{bk:183000,note:'Course longue distance de montagne. Date à chercher sur le site officiel.'}],
-  ['Triathlon d’Annecy (M)','Le Pâquier (Haute-Savoie)','FR','olympic',9],
-  ['T97.4 (L)','Saint-Leu (La Réunion)','FR','half',2,{date:'2027-02-14',ff:1}],
-  ['MadinTRI Triathlon International de Martinique (L)','Sainte-Luce (Martinique)','FR','half',4,{date:'2027-04-11',ff:1}],
-  ['Triathlon de Lacanau (L)','Lacanau (Gironde)','FR','half',4,{date:'2027-04-25',ff:1}],
-  ['Triathlon International de Cannes (L)','Cannes (Alpes-Maritimes)','FR','half',4,{date:'2027-04-25',ff:1}],
-  ['DiaoulMan de Pontivy (L)','Pontivy (Morbihan)','FR','half',5,{date:'2027-05-15',ff:1}],
-  ['Triathlon de Haute Vilaine (L)','Saint-M’Hervé (Ille-et-Vilaine)','FR','half',5,{date:'2027-05-16',ff:1}],
-  ['Verticale du 06 (XL)','Nice (Alpes-Maritimes)','FR','half',5,{date:'2027-05-16',ff:1,sw:4000,bk:120000,rn:30000,note:'Format XL : distances à vérifier (vélo de montagne).'}],
-  ['Triatbreizh (L)','Inzinzac-Lochrist (Morbihan)','FR','half',0,{note:'Date à chercher sur le site officiel.'}],
-  ['Triathlon Sud Vendée (L)','L’Aiguillon-sur-Mer (Vendée)','FR','half',9],
-  ['Triathlon de La Roche-sur-Yon (L)','La Roche-sur-Yon (Vendée)','FR','half',5,{note:'Date 2027 à confirmer.'}],
-  ['Triathlon des Cadets de Gascogne (L)','Casteljaloux (Lot-et-Garonne)','FR','half',8],
-  ['Low Triathlon (L)','Ambès (Gironde)','FR','half',0,{note:'Date à chercher sur le site officiel.'}],
-  ['Triathlon des Pyrénées (L)','Saint-Lary-Soulan (Hautes-Pyrénées)','FR','half',6,{note:'Date 2027 à confirmer.'}],
-  ['Green Triathlon du Haut Languedoc (L)','La Salvetat-sur-Agout (Hérault)','FR','half',6,{note:'Date 2027 à confirmer.'}],
-  ['Triathlon de Dijon (L)','Dijon (Côte-d’Or)','FR','half',5,{note:'Date 2027 à confirmer.'}],
-  ['Triathlon de Toulouse (M)','Toulouse (Haute-Garonne)','FR','olympic',9],
-  ['Triathlon de Saint-Malo (M)','Saint-Malo (Ille-et-Vilaine)','FR','olympic',6],
-  ['Triathlon de Pau (M)','Pau (Pyrénées-Atlantiques)','FR','olympic',6],
-  ['Triathlon du Pays de Rance (M)','Taden (Côtes-d’Armor)','FR','olympic',5],
-  ['Triathlon Orléans Parc de Loire (M)','Orléans (Loiret)','FR','olympic',5],
-  ['Triathlon des Gorges de la Loire (M)','Saint-Étienne (Loire)','FR','olympic',5],
-  ['Triathlon Dinard Côte d’Émeraude','Dinard (Ille-et-Vilaine)','FR','olympic',0,{note:'Grande course bretonne (plus de 7 000 participants, formats M et L). Date à chercher sur le site officiel.'}]
-];
-var CC_NAMES={FR:'France',DE:'Allemagne',AT:'Autriche',CH:'Suisse',ES:'Espagne',IT:'Italie',GB:'Royaume-Uni',NL:'Pays-Bas',DK:'Danemark',SE:'Suède',EE:'Estonie',US:'États-Unis',CA:'Canada',AU:'Australie',NZ:'Nouvelle-Zélande',ZA:'Afrique du Sud',BR:'Brésil',MX:'Mexique',BE:'Belgique',PT:'Portugal',LU:'Luxembourg',JP:'Japon',CN:'Chine'};
+var RACE_CAT=window.RACE_CAT||[];   // fichier races.js, mis à jour automatiquement (voir CATALOGUE.md)
+var CC_NAMES={RO:'Roumanie',IL:'Israël',AE:'Émirats arabes unis',TW:'Taïwan',KR:'Corée du Sud',PL:'Pologne',SK:'Slovaquie',UZ:'Ouzbékistan',OM:'Oman',CZ:'Tchéquie',RS:'Serbie',HR:'Croatie',GR:'Grèce',NO:'Norvège',FR:'France',DE:'Allemagne',AT:'Autriche',CH:'Suisse',ES:'Espagne',IT:'Italie',GB:'Royaume-Uni',NL:'Pays-Bas',DK:'Danemark',SE:'Suède',EE:'Estonie',US:'États-Unis',CA:'Canada',AU:'Australie',NZ:'Nouvelle-Zélande',ZA:'Afrique du Sud',BR:'Brésil',MX:'Mexique',BE:'Belgique',PT:'Portugal',LU:'Luxembourg',JP:'Japon',CN:'Chine'};
 var PUB_API='https://ironman-strava.morgancabironman.workers.dev';
 function normS(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();}
 function catSearch(q){
@@ -2392,7 +2526,7 @@ function catSearch(q){
   RACE_CAT.forEach(function(e){
     var hay=normS(e[0]+' '+e[1]+' '+(CC_NAMES[e[2]]||e[2])+' '+({full:'ironman 140.6 xxl',half:'70.3 demi',olympic:'olympique',sprint:'sprint'})[e[3]]);
     if(!tk.filter(function(t){return t.length>1;}).every(function(t){return hay.indexOf(t)>=0;}))return;
-    out.push({src:'cat',name:e[0],city:e[1],cc:e[2],format:e[3],month:e[4],date:(e[5]&&e[5].date)||'',ff:!!(e[5]&&e[5].ff),note:(e[5]&&e[5].note)||'',dist:(e[5]&&(e[5].sw||e[5].bk||e[5].rn||e[5].bikeM))?{swimM:e[5].sw||FORMATS[e[3]].swim,bikeM:e[5].bk||e[5].bikeM||FORMATS[e[3]].bike,runM:e[5].rn||FORMATS[e[3]].run}:null,bikeUp:(e[5]&&e[5].bikeUp)||'',runUp:(e[5]&&e[5].runUp)||'',_s:normS(e[0]).indexOf(tk[0])===0?0:1});
+    out.push({src:'cat',name:e[0],city:e[1],cc:e[2],format:e[3],month:e[4],date:(e[5]&&e[5].date&&e[5].date>=isoDate(today()))?e[5].date:'',ff:!!(e[5]&&e[5].ff),note:(e[5]&&e[5].note)||'',dist:(e[5]&&(e[5].sw||e[5].bk||e[5].rn||e[5].bikeM))?{swimM:e[5].sw||FORMATS[e[3]].swim,bikeM:e[5].bk||e[5].bikeM||FORMATS[e[3]].bike,runM:e[5].rn||FORMATS[e[3]].run}:null,bikeUp:(e[5]&&e[5].bikeUp)||'',runUp:(e[5]&&e[5].runUp)||'',_s:normS(e[0]).indexOf(tk[0])===0?0:1});
   });
   return out.sort(function(a,b){return a._s-b._s;}).slice(0,12);
 }
@@ -2500,7 +2634,7 @@ function renderAway(){
   else if(!pv.rows.length)b+='<p class="small muted" style="margin:0">Aucune séance modifiée sur ces dates.</p>';
   else pv.rows.forEach(function(r){
     var dn=function(d){return DAYS[(d.getDay()+6)%7].slice(0,3)+' '+dnum(d);},dl=function(d){return DAYS[(d.getDay()+6)%7]+' '+fmtDay(d);};
-    b+='<div class="arow"><span class="ad">'+dn(r.d)+'</span><span class="ar">'+(r.nf?'<s>'+awayLine(r.src)+'</s><br><b>'+(r.nf.sp==='rest'?'Repos':awayLine(r.nf))+'</b>':'<b>'+awayLine(r.src)+'</b>')+(r.to?'<div class="mvto">→ Reportée au <b>'+dl(r.to)+'</b></div>':'')+'</span></div>';
+    b+='<div class="arow"><span class="ad">'+dn(r.d)+'</span><span class="ar">'+(r.nf?'<s>'+awayLine(r.src)+'</s><br><b class="'+(r.nf.sp==='rest'?'c-del':'c-mod')+'">'+(r.nf.sp==='rest'?'Repos':awayLine(r.nf))+'</b>':'<b>'+awayLine(r.src)+'</b>')+(r.to?'<div class="mvto">→ Reportée au <b>'+dl(r.to)+'</b></div>':'')+'</span></div>';
   });
   b+='</div><button class="btn pri" data-act="awaysave" style="margin:0 0 10px">'+(p.id?'Enregistrer':'Activer')+'</button>'+(p.id?'<button class="btn dng" data-act="awaydel">Supprimer la période</button>':'<button class="btn" data-act="closesheet">Annuler</button>');
   showSheet(p.id?'Modifier la période':'Vacances / week-end','Le plan s’adapte, tu peux revenir en arrière à tout moment',b);
@@ -2531,16 +2665,18 @@ function openAwayList(){
 }
 function awayBanner(wk){
   var a0=idxOfDate(wk.start),a1=a0+6,ps=awayList().filter(function(p){var f=parseYmd(p.from),t=parseYmd(p.to);return f&&t&&idxOfDate(f)<=a1&&idxOfDate(t)>=a0;});
-  if(!ps.length)return '';
-  return ps.map(function(p){return '<div class="banner" style="align-items:center">'+ic('info',20)+'<div style="flex:1"><b>'+esc(p.label)+' · '+AWAY_N[p.mode]+'</b><br>'+esc(fmtDay(parseYmd(p.from))+' → '+fmtDay(parseYmd(p.to)))+'</div><button class="chip" style="border:0" data-act="awayedit" data-id="'+esc(p.id)+'">Modifier</button></div>';}).join('');
+  var sts=stepsOfWeek(wk.n).map(function(st){return '<div class="banner" style="align-items:center">'+ic('race',20)+'<div style="flex:1"><b>'+esc(st.name)+'</b><br>'+esc(fmtLong(parseYmd(st.date))+' · '+STEP_P[st.prio])+'</div><button class="chip" style="border:0" data-act="stepedit" data-id="'+esc(st.id)+'">Modifier</button></div>';}).join('');
+  if(!ps.length)return sts;
+  return sts+ps.map(function(p){return '<div class="banner" style="align-items:center">'+ic('info',20)+'<div style="flex:1"><b>'+esc(p.label)+' · '+AWAY_N[p.mode]+'</b><br>'+esc(fmtDay(parseYmd(p.from))+' → '+fmtDay(parseYmd(p.to)))+'</div><button class="chip" style="border:0" data-act="awayedit" data-id="'+esc(p.id)+'">Modifier</button></div>';}).join('');
 }
 function awayNote(s){
+  if(s.step)return '<div class="goal adp-n"><b>Course intermédiaire</b>Tes séances autour de cette course sont adaptées.<br><button class="chip" style="border:0;min-height:28px;margin-top:8px" data-act="stepedit" data-id="'+esc(s.step)+'">Modifier la course</button></div>';
   if(!s.adapt&&!s.moved)return '';
   var pid=(s.adapt||s.moved).pid,lab=(s.adapt||s.moved).label,t='';
   if(s.adapt&&s.orig)t+='<b>Séance adaptée · '+esc(lab)+' ('+AWAY_N[s.adapt.mode]+')</b>Séance d’origine : '+esc(s.orig.title)+(s.orig.sp!=='rest'?' · '+fh(s.orig.min):'')+'.<br>';
   else t+='<b>Séance déplacée · '+esc(lab)+'</b>';
   if(s.moved){var o=addDays(PLAN_START,s.moved.from);t+='Prévue à l’origine le '+DAYS[(o.getDay()+6)%7].toLowerCase()+' '+fmtDay(o)+'.<br>';}
-  return '<div class="goal adp-n">'+t+'<button class="chip" style="border:0;min-height:28px;margin-top:8px" data-act="awayedit" data-id="'+esc(pid)+'">Modifier la période</button></div>';
+  return '<div class="goal adp-n">'+t+'<button class="chip" style="border:0;min-height:28px;margin-top:8px" data-act="'+(s.adapt&&s.adapt.step?'stepedit':'awayedit')+'" data-id="'+esc(pid)+'">'+(s.adapt&&s.adapt.step?'Modifier la course':'Modifier la période')+'</button></div>';
 }
 /* ---------- Distance estimée des séances vélo / course : durée de chaque bloc × vitesse cible ----------
    Vitesses : celles calculées depuis tes activités Garmin (autoProf) ; à défaut, repères par défaut (ou seuil saisi pour la course). */
@@ -2897,6 +3033,7 @@ function vPlan(){
     '<p class="plan-dates">'+fmtDay(PLAN_START)+' '+PLAN_START.getFullYear()+' → '+fmtLong(RACE_DATE).toLowerCase()+'</p>'+
     '<div class="phasebar" role="img" aria-label="Répartition des '+vis.length+' phases">';
   vis.forEach(function(v){h+='<span style="flex:'+(v.b-v.a+1)+';background:'+v.p.col+'"></span>';});
+  stepList().forEach(function(x){if(stepInPlan(x))h+='<i class="mkst" style="left:'+(idxOfDate(parseYmd(x.date))+0.5)/(NW*7)*100+'%" title="'+esc(x.name)+'"></i>';});
   if(st.s!=='before')h+='<i class="mk" style="left:'+(Math.min(100,cur/NW*100))+'%"></i>';
   h+='</div><div class="phticks" aria-hidden="true">';
   vis.forEach(function(v){h+='<span style="flex:'+(v.b-v.a+1)+'">S'+v.a+'</span>';});
@@ -2917,7 +3054,7 @@ function vPlan(){
       '<span class="bh">'+fh(bm)+'<small'+(all?' class="ok"':'')+'>'+(all?'Terminé':bd+' / '+bn+' séance'+(bn>1?'s':''))+'</small></span>'+(bd?'<span class="pg"><i style="width:'+pct(bd,bn)+'%"></i></span>':'')+'</summary><p class="bg">'+esc(b.g)+'</p><div class="wks">';
     for(i=b.a;i<=b.b;i++){
       var wk=PLAN[i-1],ws=wkStats(wk),isCur=i===st.w&&(st.s==='during'||st.s==='raceday'),ok=ws.n>0&&ws.d===ws.n;
-      h+='<button class="wk'+(isCur?' cur':'')+'" data-act="gowk" data-w="'+i+'"><span class="wn">'+i+'</span><span class="wm"><b>'+fmtRange(wk.start)+'</b><small>'+KIND[wk.kind]+(isCur?' · en cours':'')+'</small></span>'+
+      h+='<button class="wk'+(isCur?' cur':'')+'" data-act="gowk" data-w="'+i+'"><span class="wn">'+i+'</span><span class="wm"><b>'+fmtRange(wk.start)+'</b><small>'+KIND[wk.kind]+(isCur?' · en cours':'')+'</small>'+stepsOfWeek(i).map(function(x){return '<small class="wkst">'+ic('race',12)+esc(x.name)+'</small>';}).join('')+'</span>'+
         '<span class="wh">'+(wk.kind==='race'?'Jour J':fh(wk.min))+bar(pct(wk.min,maxMin))+'</span>'+
         (ok?'<span class="wd ok">'+ic('check',14)+'</span>':'<span class="wd">'+(ws.n?ws.d+'/'+ws.n:'')+'</span>')+'</button>';
     }
@@ -3139,13 +3276,15 @@ document.addEventListener('click',function(e){
   else if(a==='calpreset'&&awayDraft){awayPreset(awayDraft,d.v);renderAway();}
   else if(a==='calnav'){
     var dir=+d.v;
-    if(d.ns==='away'&&awayDraft){var nm=new Date(awayDraft.cal.y,awayDraft.cal.m+dir,1);awayDraft.cal={y:nm.getFullYear(),m:nm.getMonth()};renderAway();}
+    if(d.ns==='step'&&stepDraft){var nst=new Date(stepDraft.cal.y,stepDraft.cal.m+dir,1);stepDraft.cal={y:nst.getFullYear(),m:nst.getMonth()};renderStep();}
+    else if(d.ns==='away'&&awayDraft){var nm=new Date(awayDraft.cal.y,awayDraft.cal.m+dir,1);awayDraft.cal={y:nm.getFullYear(),m:nm.getMonth()};renderAway();}
     else if(d.ns==='rstart'&&raceDraft){var ns2=new Date(raceDraft.scal.y,raceDraft.scal.m+dir,1);raceDraft.scal={y:ns2.getFullYear(),m:ns2.getMonth()};renderSetup();}
     else if(d.ns==='race'&&raceDraft){var nr=new Date(raceDraft.cal.y,raceDraft.cal.m+dir,1);raceDraft.cal={y:nr.getFullYear(),m:nr.getMonth()};renderSetup();}
     else if(d.ns==='data'){var rg=dRange(dataActs()),bs=dcalM||{y:rg.to.getFullYear(),m:rg.to.getMonth()},nd2=new Date(bs.y,bs.m+dir,1);dcalM={y:nd2.getFullYear(),m:nd2.getMonth()};render(true);}
   }
   else if(a==='calday'){
-    if(d.ns==='away'&&awayDraft){var r1=calPick(awayDraft.from,awayDraft.to,awayDraft.pending,d.d);awayDraft.from=r1.from;awayDraft.to=r1.to;awayDraft.pending=r1.pending;awayDraft.touched=true;renderAway();}
+    if(d.ns==='step'&&stepDraft){stepDraft.date=d.d;stepDraft.hint='';renderStep();}
+    else if(d.ns==='away'&&awayDraft){var r1=calPick(awayDraft.from,awayDraft.to,awayDraft.pending,d.d);awayDraft.from=r1.from;awayDraft.to=r1.to;awayDraft.pending=r1.pending;awayDraft.touched=true;renderAway();}
     else if(d.ns==='rstart'&&raceDraft){raceDraft.start=d.d;renderSetup();}
     else if(d.ns==='race'&&raceDraft){raceDraft.date=d.d;renderSetup();}
     else if(d.ns==='data'){var f2=state.ui.dflt=state.ui.dflt||{m:'custom'},r2=calPick(f2.from||d.d,f2.to||d.d,dcalPend,d.d);f2.from=r2.from;f2.to=r2.to;f2.m='custom';dcalPend=r2.pending;dsel=null;save();render(true);}
@@ -3158,6 +3297,15 @@ document.addEventListener('click',function(e){
   else if(a==='svresync')svResync();
   else if(a==='settings')openSheet();
   else if(a==='admreload')adminLoad();
+  else if(a==='steps'){stepDraft=null;openSteps();}
+  else if(a==='stepnew'){stepDraft=stepNew();renderStep();}
+  else if(a==='stepedit')openStepEdit(d.id);
+  else if(a==='stepkind'&&stepDraft){stepDraft.kind=d.v;renderStep();}
+  else if(a==='stepfmt'&&stepDraft){stepDraft.format=d.v;renderStep();}
+  else if(a==='stepprio'&&stepDraft){stepDraft.prio=d.v;renderStep();}
+  else if(a==='steppick'&&stepDraft)stepPick(stepDraft.res[+d.i]);
+  else if(a==='stepsave'&&stepDraft)saveStep();
+  else if(a==='stepdel')delStep();
   else if(a==='level')openLevel();
   else if(a==='tpick')tpOpen(d.id);
   else if(a==='tpok')tpOk();
@@ -3203,6 +3351,18 @@ document.addEventListener('keydown',function(e){
 });
 document.addEventListener('input',function(e){
   if(e.target&&e.target.id==='wz-key'){var prev=wz.key||'';wz.key=e.target.value;if(!wz.busy&&wz.key.trim().length>=20&&prev.length<5){setTimeout(function(){if(wz.step===3&&!wz.busy&&!wz.res)wzVerify();},250);}return;}
+  if(e.target&&e.target.id==='st-name'&&stepDraft){stepDraft.name=e.target.value;return;}
+  if(e.target&&e.target.id==='st-dist'&&stepDraft){stepDraft.distKm=e.target.value;var spv=document.getElementById('st-pv');if(spv)spv.innerHTML=stepPvHtml(stepDraft);return;}
+  if(e.target&&e.target.id==='st-q'&&stepDraft){
+    var sd=stepDraft,sq=e.target.value,sres=document.getElementById('st-res');sd.q=sq;sd.res=stepSearch(sq);sd.load=false;
+    clearTimeout(stepQT);
+    if(sq.trim().length>=3){
+      var sseq=++stepQS;sd.load=true;
+      stepQT=setTimeout(function(){remoteRaces(sq.trim(),function(list){if(sseq!==stepQS||stepDraft!==sd)return;sd.load=false;sd.res=sd.res.concat(list.map(function(r){return Object.assign(r,{kind:'tri'});}).filter(function(r){return !sd.res.some(function(c){return normS(c.name)===normS(r.name);});})).slice(0,12);var el=document.getElementById('st-res');if(el)el.innerHTML=stepResHtml(sd);});},400);
+    }
+    if(sres)sres.innerHTML=stepResHtml(sd);
+    return;
+  }
   if(e.target&&e.target.id==='rf-q'&&raceDraft){
     var qd=raceDraft,qv=e.target.value;qd.q=qv;qd.cres=catSearch(qv);qd.rres=[];qd.rload=false;
     var qr=document.getElementById('rf-res');if(qr)qr.innerHTML=raceResultsHtml(qd);
@@ -3305,7 +3465,7 @@ function closeSheet(){
   if(sheetDepth>0){var n=sheetDepth;sheetDepth=0;try{history.go(-n);}catch(e){}}
   else syncUrl(false);
 }
-function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,notes:state.notes,links:state.links,prof:state.ui.prof||{},lvl:state.ui.lvl||{},away:state.ui.away||[],race:state.race||CFG});}
+function payload(){return JSON.stringify({app:'ironman-sables-2027',v:1,exported:new Date().toISOString(),done:state.done,notes:state.notes,links:state.links,prof:state.ui.prof||{},lvl:state.ui.lvl||{},steps:state.ui.steps||[],away:state.ui.away||[],race:state.race||CFG});}
 function doExport(){
   var txt=payload(),ta=document.getElementById('io');ta.value=txt;
   if(navigator.share){navigator.share({title:'Sauvegarde '+RNAME,text:txt}).catch(function(){});return;}
@@ -3317,11 +3477,11 @@ function doImport(){
   try{o=JSON.parse(ta.value);if(!o||o.app!=='ironman-sables-2027'||typeof o.done!=='object'||typeof o.notes!=='object')throw 0;}
   catch(e){toast('Sauvegarde invalide');return;}
   if(!confirm('Remplacer les données actuelles par cette sauvegarde ?'))return;
-  state.done=o.done||{};state.notes=o.notes||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.lvl)state.ui.lvl=o.lvl;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
+  state.done=o.done||{};state.notes=o.notes||{};state.links=o.links||{};if(o.prof)state.ui.prof=o.prof;if(o.lvl)state.ui.lvl=o.lvl;if(o.steps)state.ui.steps=o.steps;if(o.away){state.ui.away=o.away;applyAway();}if(o.race&&o.race.date&&o.race.start){state.race=o.race;save();location.reload();return;}save();closeSheet();render(false);toast('Sauvegarde restaurée');
 }
 function doReset(){
   if(!confirm('Effacer toutes les séances cochées et toutes les notes ? Cette action est définitive.'))return;
-  state.done={};state.notes={};state.links={};state.ui.away=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
+  state.done={};state.notes={};state.links={};state.ui.away=[];state.ui.steps=[];applyAway();save();closeSheet();render(false);toast('Données réinitialisées');
 }
 
 /* ---------- Niveau déclaré (sans historique Garmin) ----------

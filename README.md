@@ -9,6 +9,7 @@ Application web (PWA) de plan d'entraînement triathlon sur mesure. On choisit s
 - **Suivi** : séances cochées à la main ou automatiquement depuis Garmin, notes de la semaine, données et estimation du temps de course.
 - **Garmin** : les activités arrivent via intervals.icu et cochent les séances ; envoi possible des séances structurées vers la montre.
 - **Questionnaire de niveau** (menu Plus → Mon niveau) : sans Garmin, ou avec peu de sorties, un temps récent par discipline (5 km / 10 km / semi, une sortie vélo, 200 m à 1 500 m de natation) suffit pour déduire les allures des séances et estimer le temps de course. Les sorties Garmin passent toujours avant, discipline par discipline.
+- **Courses intermédiaires** (menu Plus → Mes courses) : triathlon, course à pied, vélo ou natation, avec un catalogue et une saisie libre. Le jour de la course remplace les séances, les jours autour sont allégés selon la distance et l'importance ; supprimer la course rétablit le plan.
 - **Vacances et week-ends** : le plan est allégé ou déplacé pendant une absence.
 - **Compte Google** : le plan est enregistré sur l'appareil et dans le compte.
 - **Suivi propriétaire** (Plus → Suivi de l'app, réservé aux e-mails du secret `ADMIN_EMAILS`) : comptes, actifs, course choisie, progression et dernière visite de chaque utilisateur.
@@ -19,6 +20,8 @@ Application web (PWA) de plan d'entraînement triathlon sur mesure. On choisit s
 | Fichier | Rôle |
 |---|---|
 | `index.html` | Toute l'application : HTML, CSS et JavaScript, sans dépendance ni étape de compilation. |
+| `races.js` | Catalogue des triathlons, mis à jour automatiquement : voir [CATALOGUE.md](CATALOGUE.md). |
+| `scripts/`, `.github/workflows/` | Script et tâche hebdomadaire de mise à jour du catalogue. |
 | `sw.js` | Service worker (cache hors ligne). Changer le numéro dans `CACHE` à chaque version importante. |
 | `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `favicon-48.png` | Installation sur l'écran d'accueil. |
 | `strava-worker/` | Serveur Cloudflare Worker : comptes Google, sauvegarde, statistiques, lien avec intervals.icu. Le dossier garde son ancien nom, il ne gère plus Strava. |
@@ -50,11 +53,12 @@ L'adresse reflète la page affichée, ce qui permet de recharger, d'envoyer un l
 Fenêtres (`s=`) : `settings`, `legal`, `away`, `acts`, `act:ID`, `assoc:ID`, `link:ID`. En plus : `?today=AAAA-MM-JJ` simule une autre date (utile pour les tests).
 
 ## Déploiement
-- **App** : fichiers statiques sur Vercel (https://ironmanproject.vercel.app). Publier `index.html`, `sw.js`, `manifest.webmanifest` et les icônes.
+- **App** : fichiers statiques sur Vercel (https://ironmanproject.vercel.app). Publier `index.html`, `races.js`, `sw.js`, `manifest.webmanifest` et les icônes.
 - **Serveur** : `cd strava-worker && npx wrangler deploy`.
 
 ## Documentation
 - [DEV.md](DEV.md) : tester en local, profils de test, second compte.
+- [CATALOGUE.md](CATALOGUE.md) : mise à jour automatique du catalogue de courses.
 - [SETUP-COMPTES.md](SETUP-COMPTES.md) : activer la connexion Google.
 - [SETUP-GARMIN.md](SETUP-GARMIN.md) : synchroniser Garmin via intervals.icu.
 - [DEMANDE-OAUTH-INTERVALS.md](DEMANDE-OAUTH-INTERVALS.md) : demande d'accès OAuth à intervals.icu.
