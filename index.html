@@ -250,6 +250,30 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .adm-e{overflow-wrap:anywhere}
 .adm-r{margin-top:8px;font-size:14px}
 .adm-r b{font-weight:600}
+.sgl{margin:20px 4px 8px}
+.mhero{display:block;width:100%;border:0;text-align:left;color:var(--t1);background:var(--card);border-radius:var(--r);box-shadow:inset 0 0 0 1px var(--brd);padding:18px;font-family:inherit}
+.mhero:active{background:var(--card2)}
+.mh-top{display:flex;justify-content:space-between;align-items:center}
+.mh-j{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;background:var(--card3);border-radius:999px;padding:3px 10px}
+.mh-n{display:block;margin-top:8px;font-size:21px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.mh-s{display:block;margin:4px 0 14px;font-size:13.5px;color:var(--t2)}
+.mh-f{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
+.mh-l{display:inline-flex;align-items:center;gap:2px;color:var(--t1);font-weight:600;text-align:right}
+.scard{background:var(--card2);border-radius:18px;overflow:hidden}
+.sheet .scard>.fold{background:none;margin:0;border-radius:0;border-bottom:.5px solid var(--sep)}
+.sheet .scard>.fold:last-child{border-bottom:0}
+.sheet .scard>.fold>summary{padding:12px 14px;min-height:60px}
+.sheet .scard>.fold>summary>span:nth-child(2){min-width:0}
+.sheet .scard>.fold>.fbody{padding:2px 14px 16px}
+.st-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--t3);margin-right:6px;vertical-align:1px}
+.st-dot.on{background:#30d158}
+.sheet .dng-z{margin-top:22px}
+.mi.t-blue,.sheet .fold summary .mi.t-blue{background:rgba(10,132,255,.18);color:#6cb2ff}
+.mi.t-green,.sheet .fold summary .mi.t-green{background:rgba(48,209,88,.18);color:#5fdc80}
+.mi.t-orange,.sheet .fold summary .mi.t-orange{background:rgba(255,159,10,.18);color:#ffb84d}
+.mi.t-purple,.sheet .fold summary .mi.t-purple{background:rgba(191,90,242,.18);color:#d29af7}
+.mi.t-red,.sheet .fold summary .mi.t-red{background:rgba(255,69,58,.18);color:#ff7f77}
+.mi.t-grey,.sheet .fold summary .mi.t-grey{background:rgba(142,142,147,.18);color:#c7c7cc}
 .plan-note{margin:12px 0 0;font-size:13px;color:var(--t2)}
 .phd{border-top:.5px solid var(--sep)}
 .phd:first-of-type{border-top:0}
@@ -1571,12 +1595,17 @@ function vHome(){
   if(!(state.sv.url&&state.sv.key))h+=vActs();
   return h;
 }
-function mrow(icon,t,sub,act,attrs){return '<button class="mrow" data-act="'+act+'" '+(attrs||'')+'><span class="mi">'+ic(icon,22)+'</span><span style="flex:1;min-width:0"><b>'+t+'</b><small>'+sub+'</small></span>'+ic('right',18)+'</button>';}
+function mrow(icon,t,sub,act,attrs,tint){return '<button class="mrow" data-act="'+act+'" '+(attrs||'')+'><span class="mi'+(tint?' t-'+tint:'')+'">'+ic(icon,22)+'</span><span style="flex:1;min-width:0"><b>'+t+'</b><small>'+sub+'</small></span>'+ic('right',18)+'</button>';}
 function vMore(){
-  return topbar(RNAME,'Plus',false)+
-    '<div class="menu">'+mrow('plan',NW+' semaines','Vue d’ensemble des blocs et des phases','tab','data-tab="plan"')+mrow('week','Vacances & week-ends',awayList().length?awayList().length+' période'+(awayList().length>1?'s':'')+' enregistrée'+(awayList().length>1?'s':''):'Alléger le plan pendant une absence','awaylist')+'</div>'+
-    (acct()&&acct().admin?'<div class="menu">'+mrow('chart','Suivi de l’app','Utilisateurs, courses, progression','tab','data-tab="admin"')+'</div>':'')+'<div class="menu">'+(lvOffered()?mrow('chart','Mon niveau',lvAny()?'Questionnaire rempli · modifier mes temps de référence':'Estime tes allures sans Garmin (3 questions)','level'):'')+mrow('gear','Réglages','Garmin, repères d’entraînement, sauvegarde','settings')+mrow('info','Mentions légales','Confidentialité, avertissement, crédits','legal')+mrow('share','Partager l’app','Envoie le lien à un ami qui prépare une course','shareapp')+'</div>'+
-    '<p class="small muted" style="text-align:center;margin:18px 0 4px;line-height:1.6">'+esc(RNAME)+'<br>'+esc(fmtLong(RACE_DATE))+'<br>Plan de '+NW+' semaines · du '+fmtDay(PLAN_START)+' au '+fmtDay(RACE_DATE)+'</p>';
+  var t=stats().t,rd=diffDays(RACE_DATE,today()),aw=awayList().length,grp=function(title,rows){return '<div class="eyebrow sgl">'+title+'</div><div class="menu">'+rows+'</div>';};
+  return topbar('Ton espace','Plus',false)+
+    '<button class="mhero" data-act="tab" data-tab="plan"><span class="mh-top"><span class="eyebrow">Ma course</span>'+(rd>=0?'<span class="mh-j">J-'+rd+'</span>':'')+'</span><b class="mh-n">'+esc(RNAME)+'</b>'+
+      '<span class="mh-s">'+esc(fmtLong(RACE_DATE))+' · '+FMT.n+'</span>'+bar(pct(t.d,t.n))+
+      '<span class="mh-f"><span>'+t.d+' / '+t.n+' séances</span><span class="mh-l">Voir mon plan de '+NW+' semaines'+ic('right',16)+'</span></span></button>'+
+    grp('Mon entraînement',mrow('week','Vacances & week-ends',aw?aw+' période'+(aw>1?'s':'')+' enregistrée'+(aw>1?'s':''):'Alléger le plan pendant une absence','awaylist','','green')+(lvOffered()?mrow('chart','Mon niveau',lvAny()?'Modifier mes temps de référence':'Estimer mes allures en 3 questions','level','','orange'):''))+
+    grp('L’app',mrow('gear','Réglages','Garmin, compte, sauvegarde','settings','','blue')+mrow('share','Partager l’app','Envoyer le lien à un ami','shareapp','','purple'))+
+    (acct()&&acct().admin?grp('Propriétaire',mrow('chart','Suivi de l’app','Utilisateurs, courses, progression','tab','data-tab="admin"','grey')):'')+
+    '<div style="text-align:center;margin:6px 0 4px"><button class="lnk" data-act="legal" style="margin:0;color:var(--t3)">Mentions légales et confidentialité</button></div>';
 }
 function autoSummary(){
   var ap=autoProf();
@@ -3228,33 +3257,33 @@ document.getElementById('sheet').addEventListener('toggle',function(e){var d=e.t
 
 function pv(k){var p=state.ui.prof||{};return p[k]?(k==='thr'||k==='css'?mmss(p[k]):p[k]):'';}
 var sheetFold={};
-function foldHtml(id,icon,title,sub,body,open){
+function foldHtml(id,icon,title,sub,body,open,tint){
   var o=sheetFold[id]!==undefined?sheetFold[id]:!!open;
-  return '<details class="fold" data-fold="'+id+'"'+(o?' open':'')+'><summary><span class="mi">'+ic(icon,18)+'</span><span>'+title+'<small>'+sub+'</small></span></summary><div class="fbody">'+body+'</div></details>';
+  return '<details class="fold" name="reglages" data-fold="'+id+'"'+(o?' open':'')+'><summary><span class="mi'+(tint?' t-'+tint:'')+'">'+ic(icon,18)+'</span><span>'+title+'<small>'+sub+'</small></span></summary><div class="fbody">'+body+'</div></details>';
 }
 function openSheet(){
-  var sh=document.getElementById('sheet'),linked=!!(state.sv.url&&state.sv.key);
+  var sh=document.getElementById('sheet'),linked=!!(state.sv.url&&state.sv.key),grp=function(title,rows){return '<div class="eyebrow sgl">'+title+'</div><div class="scard">'+rows+'</div>';};
   sh.innerHTML='<div class="row shead"><h2>Réglages</h2><span class="sp"></span><button class="iconbtn" data-act="closesheet" aria-label="Fermer" style="background:var(--card3)">'+ic('left',22).replace('m15 18-6-6 6-6','M18 6 6 18M6 6l12 12')+'</button></div>'+
-    foldHtml('race','race','Ma course',esc(RNAME)+' · '+fmtDay(RACE_DATE)+' '+RACE_DATE.getFullYear(),'<p><b>'+esc(RNAME)+'</b><br>'+esc(fmtLong(RACE_DATE))+'<br>'+FMT.n+' · '+fk(RACE.swimM)+' km · '+fk(RACE.bikeM)+' km · '+fk(RACE.runM)+' km<br>Plan de '+NW+' semaines.</p><button class="btn" data-act="racechange">Changer de course</button>')+
-    foldHtml('garmin','bike','Connexion Garmin',linked?'Connecté · '+ago(state.sv.t):'Non configurée',svFoldHtml(),!linked)+
-    foldHtml('send','share','Envoi vers la montre','Séances structurées via intervals.icu',pushSettings())+
-    foldHtml('prof','gear','Mes repères d’entraînement','FTP, FC max, allures · calculés automatiquement',
-      '<p>Optionnel. Par défaut, l’app calcule tes zones et allures à partir de tes activités Garmin ; saisis une valeur seulement pour la forcer.'+autoSummary()+'</p>'+(lvOffered()?'<button class="btn" data-act="level" style="margin:0 0 12px">'+(lvAny()?'Modifier mon niveau (questionnaire)':'Sans Garmin : remplir le questionnaire de niveau')+'</button>':'')+
+    grp('Ma course',foldHtml('race','race',esc(RNAME),fmtDay(RACE_DATE)+' '+RACE_DATE.getFullYear()+' · '+NW+' semaines','<p>'+esc(fmtLong(RACE_DATE))+'<br>'+FMT.n+' · '+fk(RACE.swimM)+' km · '+fk(RACE.bikeM)+' km · '+fk(RACE.runM)+' km</p><button class="btn" data-act="racechange">Changer de course</button>',false,'red'))+
+    grp('Garmin',foldHtml('garmin','bike','Connexion Garmin','<i class="st-dot'+(linked?' on':'')+'"></i>'+(linked?'Connecté · '+ago(state.sv.t):'Non connecté'),svFoldHtml(),false,'green')+
+      (linked?foldHtml('send','share','Envoi vers la montre','Séances structurées',pushSettings(),false,'green'):''))+
+    grp('Entraînement',foldHtml('prof','gear','Mes repères','FTP, FC max, allures',
+      '<p>Facultatif : saisis une valeur seulement pour remplacer le calcul automatique.'+autoSummary()+'</p>'+(lvOffered()?'<button class="btn" data-act="level" style="margin:0 0 12px">'+(lvAny()?'Modifier mon niveau (questionnaire)':'Remplir le questionnaire de niveau')+'</button>':'')+
       '<label class="inp"><span>FTP vélo<small>watts (test 20 min × 0,95)</small></span><input id="pf-ftp" inputmode="numeric" placeholder="ex. 220" value="'+esc(pv('ftp'))+'"></label>'+
       '<label class="inp"><span>FC max<small>bpm</small></span><input id="pf-fc" inputmode="numeric" placeholder="ex. 185" value="'+esc(pv('fc'))+'"></label>'+
       tpField('pf-thr','Allure seuil course','par km (≈ 10 km)')+
-      tpField('pf-css','CSS natation','par 100 m'))+
-    foldHtml('away','week','Vacances & week-ends',awayList().length?awayList().length+' période'+(awayList().length>1?'s':''):'Alléger ou déplacer les séances pendant une absence','<p>Pendant un week-end ou des vacances, le plan est allégé, adapté au matériel disponible ou déplacé sur d’autres jours.</p><button class="btn pri" data-act="awaylist">Gérer les périodes</button>')+
-    (function(){var f=accountFoldHtml();return f?foldHtml('account','home','Compte',acct()?esc(acct().email):'Connecte-toi pour retrouver ton plan partout',f,!acct()):'';})()+
-    (acct()?'':foldHtml('cloud','share','Sauvegarde par code',cloudCfg()?'Activée · chiffrée':'Sans compte : un code de récupération',cloudFoldHtml()))+
-    foldHtml('backup','notes','Sauvegarde','Exporter ou restaurer tes données',
-      '<p>Tout est enregistré automatiquement sur cet appareil. Exporte une copie de sécurité de temps en temps (changement de téléphone, nettoyage de Safari…).</p>'+
+      tpField('pf-css','CSS natation','par 100 m'),false,'orange'))+
+    grp('Compte et données',(function(){var f=accountFoldHtml();return f?foldHtml('account','home','Compte',acct()?esc(acct().email):'Non connecté',f,!acct(),'blue'):'';})()+
+      (acct()?'':foldHtml('cloud','share','Sauvegarde par code',cloudCfg()?'Activée · chiffrée':'Sans compte',cloudFoldHtml(),false,'blue'))+
+      foldHtml('backup','notes','Copie de sauvegarde','Exporter ou restaurer',
+      '<p>Tout est enregistré automatiquement sur cet appareil. Garde une copie avant de changer de téléphone.</p>'+
       '<div class="btns"><button class="btn pri" data-act="export">Exporter</button><button class="btn" data-act="import">Importer</button></div>'+
-      '<textarea id="io" style="min-height:96px;margin-top:10px" placeholder="La sauvegarde apparaît ici après « Exporter ». Pour restaurer, colle-la ici puis touche « Importer »." aria-label="Données de sauvegarde"></textarea>')+
-    foldHtml('about','info','À propos','Installation, plan, bienvenue',
+      '<textarea id="io" style="min-height:96px;margin-top:10px" placeholder="La sauvegarde apparaît ici après « Exporter ». Pour restaurer, colle-la ici puis touche « Importer »." aria-label="Données de sauvegarde"></textarea>',false,'blue'))+
+    grp('À propos',foldHtml('about','info','L’application','Installation, présentation, statistiques',
       '<p><b>Installer sur iPhone</b> : dans Safari, touche Partager, puis « Sur l’écran d’accueil ». L’app s’ouvre alors en plein écran et garde tes données hors connexion.</p>'+
-      '<p>Plan : '+NW+' semaines du '+fmtDay(PLAN_START)+' '+PLAN_START.getFullYear()+' au '+fmtLong(RACE_DATE)+'. Les volumes sont indicatifs : adapte-les à ton niveau et à ta fatigue.</p>'+
-      '<button class="btn" data-act="welcome" style="margin-top:4px">Revoir la présentation</button><button class="btn" data-act="legal" style="margin-top:8px">Mentions légales et confidentialité</button><button class="btn" data-act="togstats" style="margin-top:8px">Statistiques d’usage anonymes : '+(statsOn()?'activées':'désactivées')+'</button>')+(adminStats?foldHtml('stats','chart','Statistiques d’usage','Réservé au propriétaire',statsHtml()):'')+
+      '<p class="small muted">Les volumes du plan sont indicatifs : adapte-les à ton niveau et à ta fatigue.</p>'+
+      '<div class="row" style="margin:0 0 12px"><div style="flex:1"><b style="font-size:14.5px">Statistiques d’usage</b><div class="small muted">Anonymes</div></div><button class="chip'+(statsOn()?' hl':'')+'" style="border:0;min-height:36px;padding:0 16px" data-act="togstats" aria-pressed="'+statsOn()+'">'+(statsOn()?'Activées':'Désactivées')+'</button></div>'+
+      '<button class="btn" data-act="welcome">Revoir la présentation</button>',false,'grey')+(adminStats?foldHtml('stats','chart','Statistiques d’usage','Réservé au propriétaire',statsHtml(),false,'grey'):''))+
     '<button class="btn dng dng-z" data-act="reset">Tout réinitialiser</button>';
   sh.scrollTop=0;document.getElementById('sheetbg').classList.add('on');sheetRoute('settings');
 }
