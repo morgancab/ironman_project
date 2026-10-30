@@ -278,6 +278,14 @@ svg[data-ch]{touch-action:pan-y;cursor:crosshair}
 .wkst{display:flex!important;align-items:center;gap:4px;color:#ffb84d!important;font-weight:600}
 .c-del,.dstat b.c-del{color:#ff6b61}
 .c-mod,.dstat b.c-mod{color:#ff9f0a}
+.coach-t{margin:12px 0 14px;font-size:15.5px;line-height:1.45}
+.coach-t b{font-weight:700}
+.csig{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:.5px solid var(--sep);font-size:14px}
+.csig:first-of-type{border-top:0}
+.csig i{flex:none;width:10px;height:10px;border-radius:50%}
+.csig i.sg-ok{background:#30d158}.csig i.sg-warn{background:#ffd60a}.csig i.sg-bad{background:#ff5e4e}
+.csig b{margin-left:auto;font-weight:600;font-size:13px;color:var(--t2);text-align:right}
+.zn{color:var(--t3);font-size:12px}
 .plan-note{margin:12px 0 0;font-size:13px;color:var(--t2)}
 .phd{border-top:.5px solid var(--sep)}
 .phd:first-of-type{border-top:0}
@@ -1248,13 +1256,13 @@ var SW={easy:['RPE 3–4',12,20],end:['RPE 4–5',8,14],im:['RPE 5',4,8],css:['R
 function mmss(s){s=Math.round(s);return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);}
 function parseT(s){var m=/^\s*(\d+)[:'’](\d{1,2})\s*$/.exec(s||'');return m?(+m[1])*60+(+m[2]):0;}
 /* ---------- Repères automatiques (Garmin) : zones de FC, allures et vitesses issues de tes activités ----------
-   Zones : celles d’intervals.icu (7 zones de FC). Allures / vitesses à une FC donnée : régression sur tes sorties des 26
+   Zones : celles d’intervals.icu (souvent 7 zones de FC, les zones 5 et plus sont regroupées à l’affichage). Allures / vitesses à une FC donnée : régression sur tes sorties des 26
    dernières semaines. Allure « Ironman » : celle de ton estimation de course (onglet Course), scénario réaliste.
    Les repères saisis à la main dans les réglages restent prioritaires, discipline par discipline. */
 var APc={k:'',v:null};
 function autoProf(){
   var sv=state.sv||{},acts=sv.acts||[],m=sv.meta||{},hz=sv.hrz||m.hrz;
-  if(!acts.length||!hz||hz.length<7)return null;
+  if(!acts.length||!hz||hz.length<5)return null;
   var key=acts.length+':'+(acts[0]&&acts[0].id)+':'+JSON.stringify(state.ui.race||{})+':'+hz.join(',');
   if(APc.k===key)return APc.v;
   var all=dataActs(),P=raceParams(),E=estRace(all,Object.assign({},P,{scen:'real'}),null),base=idxOfDate(today()),ap={hz:hz,P:P};
@@ -3777,7 +3785,7 @@ document.addEventListener('pointerup',function(e){if(e.pointerType==='touch')set
 /* ---------- Données : agrégats, forme, graphiques ---------- */
 var SPCOL={swim:'#3987e5',bike:'#199e70',run:'#d95926',str:'#98989f',oth:'#6c6c70'};
 var SPLBL={swim:'Natation',bike:'Vélo',run:'Course à pied',str:'Renforcement',oth:'Autres'};
-var ZCOL=['#184f95','#1c5cab','#256abf','#2a78d6','#3987e5','#6da7ec','#9ec5f4'];
+var ZONES=[['Récupération','#7fdc9b'],['Endurance','#30d158'],['Tempo','#ffd60a'],['Seuil','#ff9f0a'],['Maximal','#ff5e4e']];
 var dsel=null;
 function skey(a){return actSport(a)||'oth';}
 function dataActs(){return ((state.sv&&state.sv.acts)||[]).filter(function(a){return a&&a.s&&plLocal(a.s);});}
@@ -3835,8 +3843,17 @@ function fitChart(S){
   var W=340,H=150,L=30,B=20,T=8,R=8,n=S.length,mx=0,i;
   S.forEach(function(p){mx=Math.max(mx,p[1],p[2]);});
   var sc=niceScale(Math.max(mx,5)),x=function(i){return L+i*(W-L-R)/(n-1);},y=function(v){return T+(H-T-B)*(1-v/sc.top);},v;
-  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Évolution de la fitness et de la fatigue" data-ch="fit">';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Évolution de la condition et de la fatigue, avec l’écart entre les deux coloré du vert au rouge" data-ch="fit">';
   for(v=0;v<=sc.top+1e-9;v+=sc.step)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+(v?'#2c2c2e':'#48484a')+'"/><text x="'+(L-6)+'" y="'+(y(v)+3.5)+'" text-anchor="end" font-size="10" fill="#85847d">'+v+'</text>';
+  // Écart entre les deux courbes, coloré selon la fraîcheur (mêmes seuils que formLabel)
+  var gapC=function(i){var t=((S[i][1]-S[i][2])+(S[i+1][1]-S[i+1][2]))/2;return t>=-10?'#30d158':t>=-30?'#ff9f0a':'#ff5e4e';},g0=0;
+  for(i=0;i<n-1;i++){
+    if(i<n-2&&gapC(i+1)===gapC(g0))continue;
+    var up='',dn='',k;
+    for(k=g0;k<=i+1;k++){up+=(k>g0?'L':'M')+x(k).toFixed(1)+' '+y(S[k][1]).toFixed(1);dn='L'+x(k).toFixed(1)+' '+y(S[k][2]).toFixed(1)+dn;}
+    s+='<path d="'+up+dn+'Z" fill="'+gapC(g0)+'" fill-opacity=".42"/>';
+    g0=i+1;
+  }
   [[1,'#a9a8a0'],[2,'#f5f4ef']].forEach(function(sr){
     var d='';S.forEach(function(p,i){d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(p[sr[0]]).toFixed(1);});
     s+='<path d="'+d+'" fill="none" stroke="'+sr[1]+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
@@ -3847,7 +3864,7 @@ function fitChart(S){
   S.forEach(function(p,i){var dt=addDays(PLAN_START,p[0]),m=dt.getMonth();if(m!==lastM){if(lastM!==-1&&i>8)s+='<text x="'+x(i)+'" y="'+(H-5)+'" text-anchor="middle" font-size="10" fill="#85847d">'+MONTHS[m].replace('.','')+'</text>';lastM=m;}});
   var pts=S.map(function(p,i){
     var dt=addDays(PLAN_START,p[0]),tsb=p[1]-p[2];
-    return {x:x(i),dots:[[y(p[1]),'#a9a8a0'],[y(p[2]),'#f5f4ef']],tip:'<b>'+DAYS[(dt.getDay()+6)%7]+' '+fmtDay(dt)+' '+dt.getFullYear()+'</b><br>Fitness <b>'+Math.round(p[1])+'</b> · Fatigue <b>'+Math.round(p[2])+'</b><br>Forme <b>'+(tsb>0?'+':tsb<0?'−':'')+Math.abs(Math.round(tsb))+'</b> · '+formLabel(tsb)};
+    return {x:x(i),dots:[[y(p[1]),'#a9a8a0'],[y(p[2]),'#f5f4ef']],tip:'<b>'+DAYS[(dt.getDay()+6)%7]+' '+fmtDay(dt)+' '+dt.getFullYear()+'</b><br>Condition <b>'+Math.round(p[1])+'</b> · Fatigue <b>'+Math.round(p[2])+'</b><br>Fraîcheur <b>'+(tsb>0?'+':tsb<0?'−':'')+Math.abs(Math.round(tsb))+'</b> · '+formLabel(tsb)};
   });
   CH.fit={W:W,H:H,T:T,B:B,pts:pts};
   return s+hvLayer()+'</svg>';
@@ -3883,17 +3900,57 @@ function weekReadout(agg,w){
   var main=dist?km(o.msum)+' km':fmtSec(o.sec),other=dist?fmtSec(o.sec):(o.msum>0?km(o.msum)+' km':'');
   return t+' · <b>'+main+'</b>'+(other?' · '+other:'')+' · '+o.n+' séance'+(o.n>1?'s':'')+(o.l?' · charge '+o.l:'')+'<br>'+p.join(' · ');
 }
+// intervals.icu découpe souvent en 7 zones : on affiche les 5 zones habituelles, en regroupant tout ce qui dépasse le seuil
 function zonesHtml(zt,hz,compact){
-  var tot=0,i;(zt||[]).forEach(function(s,i){if(i<7)tot+=s;});
+  var z=[0,0,0,0,0],tot=0,i;
+  (zt||[]).forEach(function(v,j){z[Math.min(j,4)]+=v||0;tot+=v||0;});
   if(!tot)return '';
   var bar='<div class="zbar" role="img" aria-label="Répartition du temps par zone de fréquence cardiaque">',rows='';
-  for(i=0;i<7;i++){
-    var s=zt[i]||0,pc=Math.round(s/tot*100);
-    bar+='<span style="flex:'+s+';background:'+ZCOL[i]+'" title="Z'+(i+1)+' · '+fmtSec(s)+' · '+pc+' %"></span>';
-    var rng=hz&&hz.length>=7?(i===0?'< '+(hz[0]+1):(hz[i-1]+1)+'–'+hz[i])+' bpm':'';
-    if(!compact||s>0)rows+='<div class="zrow"><i style="background:'+ZCOL[i]+'"></i><span>Z'+(i+1)+(rng?' · '+rng:'')+'</span><span>'+fmtSec(s)+' · '+pc+' %</span></div>';
+  for(i=0;i<5;i++){
+    var v=z[i],pc=Math.round(v/tot*100),rng='';
+    if(hz&&hz.length>=5)rng=i===0?'moins de '+(hz[0]+1)+' bpm':i===4?'plus de '+hz[3]+' bpm':(hz[i-1]+1)+'–'+hz[i]+' bpm';
+    bar+='<span style="flex:'+v+';background:'+ZONES[i][1]+'" title="Z'+(i+1)+' · '+fmtSec(v)+' · '+pc+' %"></span>';
+    if(!compact||v>0)rows+='<div class="zrow"><i style="background:'+ZONES[i][1]+'"></i><span>Z'+(i+1)+' '+ZONES[i][0]+(rng?'<small class="zn"> · '+rng+'</small>':'')+'</span><span>'+fmtSec(v)+' · '+pc+' %</span></div>';
   }
   return bar+'</div>'+rows;
+}
+// Part de chaque discipline prévue par le plan sur des semaines (une séance enchaînée compte en course, comme dans stats())
+function planShare(w0,w1){
+  var o={swim:0,bike:0,run:0,tot:0},w;
+  for(w=Math.max(0,w0);w<=Math.min(NW-1,w1);w++)PLAN[w].days.forEach(function(day){day.sessions.forEach(function(x){
+    var k=x.sp==='brick'?'run':x.sp;if(o[k]!==undefined){o[k]+=x.min;o.tot+=x.min;}
+  });});
+  return o;
+}
+// Le point du coach : forme, régularité, intensité et équilibre sur les 4 dernières semaines terminées, puis une seule action à faire
+function coachCard(all,aggAll,cw,fs){
+  var st=status(),a=cw-4,b=cw-1,sig=[],pl=0,done=0,w,lab=null,tsb=0,add=function(c,t,v){sig.push('<div class="csig"><i class="sg-'+c+'"></i><span>'+t+'</span><b>'+v+'</b></div>');};
+  if(fs&&fs.length){var last=fs[fs.length-1];tsb=last[1]-last[2];lab=formLabel(tsb);}
+  for(w=Math.max(0,a);w<=Math.min(NW-1,b);w++){pl+=PLAN[w].min;done+=((aggAll[w]||{}).sec||0)/60;}
+  var rp=pl>0?Math.round(done/pl*100):null;
+  if(rp!==null)add(rp>=85?'ok':rp>=70?'warn':'bad','Régularité',rp+' % du plan réalisé');
+  var zt=[0,0,0,0,0],zs=0,sec={swim:0,bike:0,run:0},secT=0;
+  all.forEach(function(x){var i=wIdx(x);if(i<a||i>b)return;var k=skey(x);if(sec[k]!==undefined){sec[k]+=x.d;secT+=x.d;}(x.zt||[]).forEach(function(v,j){zt[Math.min(j,4)]+=v||0;zs+=v||0;});});
+  var easy=zs?pct(zt[0]+zt[1],zs):null;
+  if(easy!==null)add(easy>=70?'ok':easy>=55?'warn':'bad','Intensité',easy+' % en facile (repère : 80 %)');
+  var ps=planShare(a,b),gapK=null,gap=0;
+  if(ps.tot&&secT)['swim','bike','run'].forEach(function(k){var g=Math.round(sec[k]/secT*100)-Math.round(ps[k]/ps.tot*100);if(g<gap){gap=g;gapK=k;}});
+  if(gapK&&gap<=-10)add('warn','Équilibre',SPLBL[gapK]+' : '+Math.abs(gap)+' points sous le plan');else if(ps.tot&&secT)add('ok','Équilibre','proche du plan');
+  if(!lab&&!sig.length)return '';
+  var kind=(st.s==='during'||st.s==='raceday')?PLAN[st.w-1].kind:'',todo;
+  if(st.s==='after')todo='Ta course est passée : récupère, puis choisis ton prochain objectif.';
+  else if(lab==='Surcharge')todo='Allège les 2 ou 3 prochains jours : remplace la prochaine séance intense par du facile ou du repos.';
+  else if(kind==='taper'||kind==='race')todo='Tu es en affûtage : moins de volume, le même rythme sur les efforts courts. Ne rattrape rien, garde ta fraîcheur.';
+  else if(rp!==null&&rp<70)todo='Priorité à la régularité : fais les séances clés de la semaine, sans chercher à rattraper le reste.';
+  else if(easy!==null&&easy<70)todo='Ralentis sur tes séances faciles : reste en zone 1 ou 2, tu dois pouvoir parler sans effort.';
+  else if(gapK&&gap<=-10)todo='Redonne de la place à ta discipline en retrait ('+SPLBL[gapK].toLowerCase()+') : ne saute pas ses prochaines séances.';
+  else if(kind==='rec')todo='Semaine de décharge : garde tes séances faciles et dors plus. C’est là que tu absorbes le travail.';
+  else if(lab==='En charge')todo='Tu accumules de la fatigue, c’est normal : suis le plan et soigne ton sommeil.';
+  else if(st.s==='before')todo='Ton plan commence le '+fmtDay(PLAN_START)+' : d’ici là, garde une routine facile et régulière.';
+  else todo='Tout est en place : suis ton plan cette semaine.';
+  var F=lab&&FORMES[lab];
+  return '<section class="card coach"><div class="row"><h2 style="margin:0">Le point du coach</h2><span class="sp"></span>'+(F?'<span class="fpill" style="--fc:'+F.c+';--fb:'+F.c+'26"><i></i>'+lab+'</span>':'')+'</div>'+
+    '<p class="coach-t"><b>Cette semaine :</b> '+todo+'</p>'+(sig.length?'<div class="eyebrow" style="margin:0 0 4px">Tes 4 dernières semaines</div>'+sig.join(''):'')+'</section>';
 }
 function sportStats(k,acts){
   var s={n:0,sec:0,m:0,up:0,hrS:0,hrT:0,lng:null,best:null},minM={swim:1000,bike:30000,run:5000}[k];
@@ -3930,7 +3987,7 @@ function dRange(acts){
 }
 function dFilterBar(R,n){
   var f=state.ui.dflt||{m:'26w'},chips=[['4w','4 semaines'],['12w','3 mois'],['26w','6 mois'],['all','Tout'],['custom','Dates…']];
-  var h='<div class="eyebrow" style="margin:6px 0 8px">Période</div><div class="rng" style="flex-wrap:wrap" role="group" aria-label="Période">'+chips.map(function(c){return '<button data-act="dflt" data-v="'+c[0]+'" aria-pressed="'+(f.m===c[0])+'">'+c[1]+'</button>';}).join('')+'</div>';
+  var h='<div class="rng" style="flex-wrap:wrap" role="group" aria-label="Période">'+chips.map(function(c){return '<button data-act="dflt" data-v="'+c[0]+'" aria-pressed="'+(f.m===c[0])+'">'+c[1]+'</button>';}).join('')+'</div>';
   if(f.m==='custom'){var cm=dcalM||{y:R.to.getFullYear(),m:R.to.getMonth()};h+='<div style="margin-top:10px">'+calHtml('data',isoDate(R.from),isoDate(R.to),new Date(2025,0,1),today(),cm.y,cm.m)+(dcalPend?'<div class="cal-hint" style="margin:8px 0 0">Touche le dernier jour de la période</div>':'')+'</div>';}
   return h+'<div class="small muted" style="margin:8px 0 16px">Du '+fmtDay(R.from)+' '+R.from.getFullYear()+' au '+fmtDay(R.to)+' '+R.to.getFullYear()+' · '+n+' activité'+(n>1?'s':'')+'</div>';
 }
@@ -3953,77 +4010,78 @@ function vData(){
   var all=dataActs(),sv=state.sv,linked=!!(sv.url&&sv.key);
   if(!linked||!all.length)return planProgressCard()+vActs();
   var cw=curWk(),aggAll=weekAgg(all),tw=aggAll[cw]||{n:0,l:0,sec:0,msum:0},pw=aggAll[cw-1]||{n:0,l:0,sec:0,msum:0},h='',d0=wStart(cw),dist=dMetric()==='dist',st0=status();
-  // 1. Cette semaine, en clair
+  // 1. Le point du coach : comment je vais, que faire
+  var fsAll=fitSeries(all);
+  h+=coachCard(all,aggAll,cw,fsAll);
+  // 2. Cette semaine, en clair
   var planned=(st0.s==='during'||st0.s==='raceday')?PLAN[st0.w-1].min:0;
   h+='<section class="card dsum"><div class="eyebrow">Cette semaine · '+fmtDay(d0)+' – '+fmtDay(addDays(d0,6))+'</div><div class="dbig">'+fmtSec(tw.sec)+(planned?'<small>sur '+fh(planned)+' prévues</small>':'')+'</div>'+(planned?bar(pct(tw.sec/60,planned)):'')+
-    '<div class="kpis" style="grid-template-columns:1fr 1fr">'+kpi('Séances',tw.n,dlt(tw.n,pw.n,String))+kpi('Distance',km(tw.msum)+' km',dlt(tw.msum/1000,pw.msum/1000,function(q){return q.toFixed(1).replace('.',',')+' km';}))+'</div></section>';
-  // période
+    '<div class="kpis" style="grid-template-columns:1fr 1fr">'+kpi('Séances',tw.n,planned?'sur '+PLAN[st0.w-1].count+' prévues':dlt(tw.n,pw.n,String))+kpi('Distance',km(tw.msum)+' km',planned?'':dlt(tw.msum/1000,pw.msum/1000,function(q){return q.toFixed(1).replace('.',',')+' km';}))+'</div></section>';
+  // 3. Sur la période
   var R=dRange(all),acts=all.filter(function(a){var d=dayIdx(a);return d>=R.fi&&d<=R.ti;}),agg=weekAgg(acts);
-  h+=dFilterBar(R,acts.length);
+  h+='<h2 class="plan-h" style="margin-top:22px">Sur la durée</h2>'+dFilterBar(R,acts.length);
   if(!acts.length)return h+'<section class="card"><p class="muted" style="margin:0">Aucune activité sur cette période.</p></section>'+vActs(acts);
-  var tSec=0,tM=0,wkCount=Math.max(1,Math.ceil((R.ti-R.fi+1)/7));
-  acts.forEach(function(a){tSec+=a.d;tM+=(skey(a)==='str'?0:a.m||0);});
-  h+='<div class="kpis"><div class="kpi"><div class="kl">Temps total</div><div class="kv" style="font-size:19px">'+fmtSec(tSec)+'</div><div class="ks">≈ '+fmtSec(tSec/wkCount)+' / semaine</div></div><div class="kpi"><div class="kl">Distance</div><div class="kv" style="font-size:19px">'+Math.round(tM/1000).toLocaleString('fr-FR')+' km</div><div class="ks">nage, vélo, course</div></div><div class="kpi"><div class="kl">Séances</div><div class="kv" style="font-size:19px">'+acts.length+'</div><div class="ks">≈ '+(Math.round(acts.length/wkCount*10)/10).toString().replace('.',',')+' / semaine</div></div></div>';
-  // 2. Respect du plan (semaines terminées de la période)
+  var tSec=0,tM=0,fi0=R.ti;
+  acts.forEach(function(a){tSec+=a.d;tM+=(skey(a)==='str'?0:a.m||0);fi0=Math.min(fi0,dayIdx(a));});
+  var wkCount=Math.max(1,Math.ceil((R.ti-fi0+1)/7));
+  h+='<div class="kpis"><div class="kpi"><div class="kl">Par semaine</div><div class="kv" style="font-size:19px">'+fmtSec(tSec/wkCount)+'</div><div class="ks">'+fmtSec(tSec)+' au total</div></div><div class="kpi"><div class="kl">Séances / sem.</div><div class="kv" style="font-size:19px">'+(Math.round(acts.length/wkCount*10)/10).toString().replace('.',',')+'</div><div class="ks">'+acts.length+' au total</div></div><div class="kpi"><div class="kl">Distance</div><div class="kv" style="font-size:19px">'+Math.round(tM/1000).toLocaleString('fr-FR')+' km</div><div class="ks">nage, vélo, course</div></div></div>';
+  // Respect du plan (semaines terminées de la période)
   var pl=0,done=0,wk;
   for(wk=Math.max(0,Math.floor(R.fi/7));wk<Math.min(NW,cw);wk++){if(wk*7>R.ti)break;pl+=PLAN[wk].min;done+=((aggAll[wk]||{}).sec||0)/60;}
   if(pl>0){
     var rp=Math.round(done/pl*100);
-    h+='<section class="card"><div class="dtitle"><h2>Respect du plan</h2><span class="chip'+(rp>=85?' hl':'')+'">'+rp+' %</span></div><p class="dsub">Temps réalisé comparé au temps prévu, sur les semaines terminées.</p>'+bar(Math.min(100,rp))+
-      '<div class="row small muted" style="margin-top:8px"><span>'+fh(Math.round(done))+' réalisées</span><span class="sp"></span><span>'+fh(Math.round(pl))+' prévues</span></div>'+
-      '<div class="dnote">'+(rp>=90?'<b>Très régulier.</b> Tu suis ton plan de près.':rp>=70?'<b>Bon rythme.</b> Tu fais l’essentiel du plan.':'<b>En dessous du plan.</b> Pas de panique : reprends à ton rythme, sans chercher à rattraper.')+'</div></section>';
+    h+='<section class="card"><div class="dtitle"><h2>Respect du plan</h2><span class="chip'+(rp>=85?' hl':'')+'">'+rp+' %</span></div>'+bar(Math.min(100,rp))+
+      '<div class="row small muted" style="margin-top:8px"><span>'+fh(Math.round(done))+' réalisées</span><span class="sp"></span><span>'+fh(Math.round(pl))+' prévues</span></div></section>';
   }
-  // 3. Volume semaine par semaine
-  var w0=Math.floor(R.fi/7),w1=Math.floor(R.ti/7),wks=[],w,best=null;
+  // Intensité : facile / soutenu / intense, puis les 5 zones
+  var zt=[0,0,0,0,0];
+  acts.forEach(function(a){if(a.zt)a.zt.forEach(function(v,i){zt[Math.min(i,4)]+=v||0;});});
+  var zs=zt.reduce(function(x,y){return x+y;},0);
+  if(zs>0){
+    var easy=pct(zt[0]+zt[1],zs),hard=pct(zt[3]+zt[4],zs),mid=Math.max(0,100-easy-hard);
+    var verdict=easy>=70?'<b>Bonne base.</b> La plupart de ton temps est facile : c’est ce qui construit l’endurance sans t’épuiser.':easy>=55?'<b>Un peu trop d’intensité.</b> Garde plus de séances vraiment faciles : tu progresseras avec moins de fatigue.':'<b>Beaucoup d’intensité.</b> Ralentis sur les séances faciles : tu dois pouvoir parler sans effort.';
+    var band=function(c,t,s,v){return '<div class="band"><i style="background:'+c+'"></i><span>'+t+'<small>'+s+'</small></span><b>'+v+' %</b></div>';};
+    h+='<section class="card"><div class="dtitle"><h2>Intensité</h2></div><p class="dsub">Repère : environ 80 % de ton temps en facile, d’après ta fréquence cardiaque.</p>'+
+      '<div class="zbar" role="img" aria-label="Répartition facile, soutenu, intense"><span style="flex:'+Math.max(easy,0.5)+';background:#30d158"></span><span style="flex:'+Math.max(mid,0.5)+';background:#ffd60a"></span><span style="flex:'+Math.max(hard,0.5)+';background:#ff5e4e"></span></div>'+
+      band('#30d158','Facile · zones 1 et 2','tu peux parler sans effort',easy)+band('#ffd60a','Soutenu · zone 3','respiration plus marquée',mid)+band('#ff5e4e','Intense · zones 4 et 5','effort dur, phrases courtes',hard)+
+      '<div class="dnote">'+verdict+'</div>'+mfold('zones','Voir mes 5 zones',zonesHtml(zt,sv.hrz,false))+'</section>';
+  }
+  // Volume semaine par semaine
+  var w0=Math.floor(R.fi/7),w1=Math.floor(R.ti/7),wks=[],w;
   for(w=w0;w<=w1;w++)wks.push(w);
   if(wks.length<2)wks=[w1-1,w1];
-  wks.forEach(function(x){var o=agg[x];if(o&&(!best||o.sec>best.sec))best={w:x,sec:o.sec};});
-  var sel=dsel!==null&&wks.indexOf(dsel)>=0?dsel:w1;
-  h+='<section class="card"><div class="dtitle"><h2>Ton entraînement</h2></div><p class="dsub">Semaine par semaine. Touche une barre pour le détail.</p>'+
+  var sel=dsel!==null&&wks.indexOf(dsel)>=0?dsel:w1,prev3=0,lastF=(aggAll[cw-1]||{}).sec||0;
+  [2,3,4].forEach(function(n){prev3+=((aggAll[cw-n]||{}).sec||0)/3;});
+  var trend=prev3>0&&lastF>0?Math.round((lastF/prev3-1)*100):null;
+  h+='<section class="card"><div class="dtitle"><h2>Ton volume</h2></div><p class="dsub">Touche une barre pour le détail de la semaine.</p>'+
     '<div class="rng" style="margin:0 0 12px" role="group" aria-label="Unité d’affichage"><button data-act="dmetric" data-v="time" aria-pressed="'+!dist+'">Temps</button><button data-act="dmetric" data-v="dist" aria-pressed="'+dist+'">Distance</button></div>'+
     '<div class="chartwrap" data-wks="'+wks.join(',')+'">'+stackChart(wks,agg,sel)+'</div>'+
     '<div class="legend" style="flex-wrap:wrap">'+['swim','bike','run','str'].filter(function(k){return !(dist&&k==='str');}).map(function(k){return '<span><i style="background:'+SPCOL[k]+'"></i>'+SPLBL[k].split(' ')[0]+'</span>';}).join('')+'</div>'+
     '<div class="readout" id="dro">'+weekReadout(agg,sel)+'</div>'+
-    (best&&best.sec>0?'<div class="dnote">Ta semaine la plus chargée : <b>'+fmtSec(best.sec)+'</b> ('+fmtDay(wStart(best.w))+' – '+fmtDay(addDays(wStart(best.w),6))+').</div>':'')+'</section>';
-  // 4. Répartition par sport
+    (trend!==null?'<div class="dnote">'+(trend>30?'<b>Hausse marquée.</b> La semaine dernière dépasse de '+trend+' % la moyenne des 3 précédentes : surveille tes sensations et tes douleurs.':trend<-30?'<b>Semaine plus légère.</b> '+Math.abs(trend)+' % sous la moyenne des 3 précédentes. Si elle n’était pas prévue, reprends progressivement.':'<b>Progression régulière.</b> La semaine dernière reste proche de la moyenne des 3 précédentes.')+'</div>':'')+'</section>';
+  // Répartition par sport, comparée au plan
   var sp={swim:{sec:0,m:0},bike:{sec:0,m:0},run:{sec:0,m:0},str:{sec:0,m:0}};
   acts.forEach(function(a){var k=skey(a);if(sp[k]){sp[k].sec+=a.d;sp[k].m+=a.m||0;}});
-  var spTot=sp.swim.sec+sp.bike.sec+sp.run.sec+sp.str.sec;
+  var spTot=sp.swim.sec+sp.bike.sec+sp.run.sec+sp.str.sec,tri=sp.swim.sec+sp.bike.sec+sp.run.sec,share=planShare(Math.floor(R.fi/7),Math.min(cw-1,Math.floor(R.ti/7)));
   if(spTot>0){
     var rows='',bars='<div class="zbar" role="img" aria-label="Répartition du temps par sport">';
     ['swim','bike','run','str'].forEach(function(k){
       if(!sp[k].sec)return;
       bars+='<span style="flex:'+sp[k].sec+';background:'+SPCOL[k]+'" title="'+SPLBL[k]+'"></span>';
-      rows+='<div class="spr sp-'+k+'"><div class="ico">'+ic(k,20)+'</div><div class="bd"><div class="pr-h" style="margin:0"><b>'+SPLBL[k]+'</b><span>'+fmtSec(sp[k].sec)+' · '+pct(sp[k].sec,spTot)+' %'+(sp[k].m>0&&k!=='str'?' · '+km(sp[k].m)+' km':'')+'</span></div></div></div>';
+      var plan=share.tot&&share[k]!==undefined&&tri?' · prévu '+pct(share[k],share.tot)+' %':'';
+      rows+='<div class="spr sp-'+k+'"><div class="ico">'+ic(k,20)+'</div><div class="bd"><div class="pr-h" style="margin:0"><b>'+SPLBL[k]+'</b><span>'+(share[k]!==undefined&&tri?pct(sp[k].sec,tri):pct(sp[k].sec,spTot))+' %'+plan+'</span></div><div class="small muted">'+fmtSec(sp[k].sec)+(sp[k].m>0&&k!=='str'?' · '+km(sp[k].m)+' km':'')+'</div></div></div>';
     });
     var detail='';
     ['swim','bike','run','str'].forEach(function(k){var s=sportStats(k,acts);if(s.n)detail+=sportCard(k,s,spTot);});
-    h+='<section class="card"><div class="dtitle"><h2>Répartition par sport</h2></div><p class="dsub">Où passe ton temps d’entraînement.</p>'+bars+'</div><div style="height:10px"></div>'+rows+mfold('sports','Voir le détail par sport',detail)+'</section>';
+    h+='<section class="card"><div class="dtitle"><h2>Par discipline</h2></div><p class="dsub">Part de chaque discipline comparée à ton plan.</p>'+bars+'</div><div style="height:10px"></div>'+rows+mfold('sports','Voir le détail par discipline',detail)+'</section>';
   }
-  // 5. Intensité : facile / moyen / intense
-  var zt=[0,0,0,0,0,0,0];
-  acts.forEach(function(a){if(a.zt)a.zt.forEach(function(s,i){if(i<7)zt[i]+=s;});});
-  var zs=zt.reduce(function(x,y){return x+y;},0);
-  if(zs>0){
-    var easy=pct(zt[0]+zt[1],zs),hard=pct(zt[3]+zt[4]+zt[5]+zt[6],zs),mid=Math.max(0,100-easy-hard);
-    var verdict=easy>=70?'<b>Bonne base.</b> La plupart de ton temps est facile : c’est ce qui construit l’endurance sans t’épuiser.':easy>=55?'<b>Un peu d’intensité en trop.</b> Garde plus de séances faciles : elles te font progresser en limitant la fatigue.':'<b>Beaucoup d’intensité.</b> Ralentis sur les séances faciles : tu dois pouvoir parler sans effort.';
-    var band=function(c,t,s,v){return '<div class="band"><i style="background:'+c+'"></i><span>'+t+'<small>'+s+'</small></span><b>'+v+' %</b></div>';};
-    var zh=zonesHtml(zt,sv.hrz,false);
-    h+='<section class="card"><div class="dtitle"><h2>Intensité</h2></div><p class="dsub">À quel effort tu t’entraînes, d’après ta fréquence cardiaque.</p>'+
-      '<div class="zbar" role="img" aria-label="Répartition facile, moyen, intense"><span style="flex:'+Math.max(easy,0.5)+';background:#30d158"></span><span style="flex:'+Math.max(mid,0.5)+';background:#ffd60a"></span><span style="flex:'+Math.max(hard,0.5)+';background:#ff6b5e"></span></div>'+
-      band('#30d158','Facile','tu peux parler sans effort',easy)+band('#ffd60a','Soutenu','respiration plus marquée',mid)+band('#ff6b5e','Intense','effort dur, phrases courtes',hard)+
-      '<div class="dnote">'+verdict+'</div>'+(zh?mfold('zones','Voir les 7 zones de fréquence cardiaque',zh):'')+'</section>';
-  }
-  // 6. Forme du moment
-  var fs=fitSeries(all),view=fs?fs.filter(function(p){return p[0]>=R.fi&&p[0]<=R.ti;}):[];
+  // Évolution de la forme
+  var view=fsAll?fsAll.filter(function(p){return p[0]>=R.fi&&p[0]<=R.ti;}):[];
   if(view.length>=2){
-    var last=view[view.length-1],tsb=last[1]-last[2],lab=formLabel(tsb),F=FORMES[lab];
-    h+='<section class="card"><div class="dtitle"><h2>Ta forme du moment</h2></div><p class="dsub">Fraîcheur ou fatigue, d’après tes dernières séances.</p>'+
-      '<div class="fpill" style="--fc:'+F.c+';--fb:'+F.c+'26"><i></i>'+lab+'</div><div class="dnote" style="margin-top:12px">'+F.t+'</div>'+
-      mfold('forme','Voir l’évolution',
-        '<div class="kpis" style="margin-bottom:10px">'+kpi('Condition',Math.round(last[1]),'ta base d’entraînement (6 sem.)')+kpi('Fatigue',Math.round(last[2]),'ces 7 derniers jours')+kpi('Fraîcheur',(tsb>0?'+':tsb<0?'−':'')+Math.abs(Math.round(tsb)),'condition − fatigue')+'</div>'+
-        '<div class="chartwrap">'+fitChart(view)+'</div><div class="legend"><span><i style="background:#f5f4ef"></i>Fatigue</span><span><i style="background:#a9a8a0"></i>Condition</span></div>'+
-        '<p class="small muted" style="margin:8px 0 0">Valeurs au '+fmtDay(addDays(PLAN_START,last[0]))+'. Plus la fatigue dépasse la condition, plus il faut récupérer. Calcul d’intervals.icu à partir de la charge de chaque séance.</p>')+'</section>';
+    var last=view[view.length-1],tsb=last[1]-last[2];
+    h+='<section class="card"><div class="dtitle"><h2>Ta forme dans le temps</h2></div><p class="dsub">L’écart entre les deux courbes indique ta fraîcheur : du rouge, il faut récupérer.</p>'+
+      '<div class="kpis" style="margin-bottom:10px">'+kpi('Condition',Math.round(last[1]),'ta base (6 sem.)')+kpi('Fatigue',Math.round(last[2]),'7 derniers jours')+kpi('Fraîcheur',(tsb>0?'+':tsb<0?'−':'')+Math.abs(Math.round(tsb)),'condition − fatigue')+'</div>'+
+      '<div class="chartwrap">'+fitChart(view)+'</div><div class="legend"><span><i style="background:#f5f4ef"></i>Fatigue</span><span><i style="background:#a9a8a0"></i>Condition</span></div><div class="legend" style="flex-wrap:wrap;margin-top:4px"><span><i style="background:#30d158;opacity:.6"></i>Tout va bien</span><span><i style="background:#ff9f0a;opacity:.6"></i>En charge</span><span><i style="background:#ff5e4e;opacity:.6"></i>Surcharge</span></div></section>';
   }
   return h+vActs(acts);
 }
