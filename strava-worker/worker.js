@@ -57,6 +57,7 @@ async function route(req, env) {
       if (url.pathname === '/pub/config' && req.method === 'GET') return json({ googleClientId: env.GOOGLE_CLIENT_ID && env.SESSION_SECRET && env.DB ? env.GOOGLE_CLIENT_ID : '' });   // pas annoncée tant que le secret de session ou la base manquent : l'app ne se verrouille pas par erreur
       if (url.pathname === '/pub/auth/google' && req.method === 'POST') return authGoogle(req, env);
       if (url.pathname.startsWith('/pub/account')) return accountRoutes(req, url, env);
+      if (url.pathname === '/pub/admin/overview' && req.method === 'GET') return adminOverview(req, env);
       return new Response('Ironman Garmin worker : OK', { status: 200 });
     } catch (e) {
       return json({ error: String((e && e.message) || e) }, 500);
@@ -192,11 +193,20 @@ async function accountRoutes(req, url, env) {
     return json({ ok: true });
   }
   if (path === '/export' && req.method === 'GET') {
-    const u = await env.DB.prepare('SELECT email, name, created, last_login, v, data, data_updated FROM users WHERE id = ?').bind(sub).first();
+    const u = await env.DB.prepare('SELECT email, name, created, last_login, last_seen, prog_done, prog_total, v, data, data_updated FROM users WHERE id = ?').bind(sub).first();
     if (!u) return json({ ok: false, error: 'compte introuvable' }, 404);
     let data = null;
     try { data = u.data ? JSON.parse(u.data) : null; } catch (e) { data = null; }
-    return json({ ok: true, export: { email: u.email, name: u.name, created: new Date(u.created).toISOString(), last_login: new Date(u.last_login).toISOString(), plan_data: data } });
+    return json({ ok: true, export: { email: u.email, name: u.name, created: new Date(u.created).toISOString(), last_login: new Date(u.last_login).toISOString(), last_seen: u.last_seen ? new Date(u.last_seen).toISOString() : null, sessions_done: u.prog_done, sessions_total: u.prog_total, plan_data: data } });
+  }
+  // Visite : dernière visite + progression (séances faites / prévues, calculées sur l'appareil car les coches Garmin n'existent que là).
+  if (path === '/ping' && req.method === 'POST') {
+    let b = null;
+    try { b = await req.json(); } catch (e) { b = null; }
+    const count = (x) => (Number.isInteger(x) && x >= 0 && x <= 5000 ? x : null);
+    await env.DB.prepare('UPDATE users SET last_seen = ?, prog_done = COALESCE(?, prog_done), prog_total = COALESCE(?, prog_total) WHERE id = ?').bind(Date.now(), count(b && b.done), count(b && b.total), sub).run();
+    const u = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(sub).first();
+    return u ? json({ ok: true, admin: isAdmin(env, u.email) }) : json({ ok: false, error: 'compte introuvable' }, 404);
   }
   if (path === '/data') {
     const u = await env.DB.prepare('SELECT data, v, data_updated FROM users WHERE id = ?').bind(sub).first();
@@ -219,6 +229,28 @@ async function accountRoutes(req, url, env) {
     }
   }
   return json({ error: 'not_found' }, 404);
+}
+
+/* ---------- Suivi propriétaire ----------
+   Route : GET /pub/admin/overview (session Google d'un e-mail listé dans le secret ADMIN_EMAILS, séparés par des virgules).
+   Seules la course et la progression sont lues dans le plan : jamais les notes ni les réglages. Les comptes propriétaires sont listés mais exclus des totaux. */
+function isAdmin(env, email) {
+  return String(env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(String(email || '').toLowerCase());
+}
+async function adminOverview(req, env) {
+  if (!env.DB) return json({ ok: false, error: 'indisponible' }, 501);
+  const sub = await readSession(req, env);
+  if (!sub) return json({ ok: false, error: 'non connecté' }, 401);
+  const me = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(sub).first();
+  if (!me || !isAdmin(env, me.email)) return json({ ok: false, error: 'accès réservé' }, 403);
+  const rows = (await env.DB.prepare("SELECT email, name, created, COALESCE(last_seen, last_login) AS seen, prog_done, prog_total, json_extract(data, '$.race.name') AS race, json_extract(data, '$.race.date') AS race_date, json_extract(data, '$.race.format') AS race_format, json_extract(data, '$.race.weeks') AS race_weeks FROM users ORDER BY seen DESC LIMIT 1000").all()).results || [];
+  const now = Date.now(), ago = (d) => now - d * 86400000, others = rows.filter((r) => !isAdmin(env, r.email));
+  const count = (f) => others.filter(f).length;
+  return json({
+    ok: true,
+    totals: { users: others.length, withPlan: count((r) => r.race), new7: count((r) => r.created >= ago(7)), new30: count((r) => r.created >= ago(30)), active7: count((r) => r.seen >= ago(7)), active30: count((r) => r.seen >= ago(30)) },
+    users: rows.map((r) => ({ email: r.email, name: r.name, created: r.created, seen: r.seen, done: r.prog_done, total: r.prog_total, race: r.race, raceDate: r.race_date, format: r.race_format, weeks: r.race_weeks, owner: isAdmin(env, r.email) })),
+  });
 }
 
 /* ---------- Sauvegarde cloud chiffrée, sans compte ----------

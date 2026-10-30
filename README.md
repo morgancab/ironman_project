@@ -11,6 +11,7 @@ Application web (PWA) de plan d'entraînement triathlon sur mesure. On choisit s
 - **Questionnaire de niveau** (menu Plus → Mon niveau) : sans Garmin, ou avec peu de sorties, un temps récent par discipline (5 km / 10 km / semi, une sortie vélo, 200 m à 1 500 m de natation) suffit pour déduire les allures des séances et estimer le temps de course. Les sorties Garmin passent toujours avant, discipline par discipline.
 - **Vacances et week-ends** : le plan est allégé ou déplacé pendant une absence.
 - **Compte Google** : le plan est enregistré sur l'appareil et dans le compte.
+- **Suivi propriétaire** (Plus → Suivi de l'app, réservé aux e-mails du secret `ADMIN_EMAILS`) : comptes, actifs, course choisie, progression et dernière visite de chaque utilisateur.
 - **Hors ligne** : installable sur l'écran d'accueil, fonctionne sans réseau.
 
 ## Structure du projet

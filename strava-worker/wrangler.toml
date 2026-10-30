@@ -16,6 +16,8 @@ SINCE = "2026-01-01"
 # Tant qu'il est vide, la connexion Google est masquée dans l'app.
 GOOGLE_CLIENT_ID = "502757245043-gdt980nau1f2gbs9bu0qqfu69mdcau1u.apps.googleusercontent.com"
 
+# Suivi propriétaire (onglet Plus → Suivi de l'app) : secret ADMIN_EMAILS, e-mails Google autorisés séparés par des virgules.
+#   npx wrangler secret put ADMIN_EMAILS
 # Statistiques d'usage anonymes (compteurs agrégés par jour : aucun identifiant, aucune adresse IP stockée)
 [[d1_databases]]
 binding = "DB"
