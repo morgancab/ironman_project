@@ -1,8 +1,175 @@
-# Tester l'app en local (profils de test)
+# Tester l'app en local
 
-L'app demande une connexion Google et enregistre le plan à deux endroits : dans le navigateur (`localStorage`) et dans ton compte (serveur). Résultat : en testant, on retombe toujours sur son propre plan. Voici comment tester « comme un autre utilisateur ».
+## Démarrage rapide
 
-## 1. Le plus simple : un profil de test (`?profil=`)
+1. Lance le projet : `npx serve -l 8080 .`
+2. Ouvre le mode test : [http://localhost:8080/dev.html](http://localhost:8080/dev.html)
+3. Choisis un appareil, une page, un profil et une date : l'aperçu se met à jour tout seul.
+
+Ce guide est aussi l'onglet **Guide** du mode test (`dev.html#guide`). Il affiche le fichier `DEV.md`.
+
+## Référence des paramètres
+
+Forme d'une adresse : les paramètres `?…` d'abord, la page `#…` ensuite.
+
+```
+http://localhost:8080/?profil=embrun&appareil=iphone-safari&today=2027-03-01#week?w=12&d=3
+                       └─ paramètres (ordre libre) ────────────────────────┘└─ page ─────┘
+```
+
+| Paramètre | Valeurs possibles | Effet | Actif |
+|---|---|---|---|
+| `profil` | Nom libre : lettres sans accent, chiffres, `-` et `_`, 24 caractères maximum | Ouvre un utilisateur de test séparé | En local |
+| `appareil` | Un nom de la liste ci-dessous | Affiche l'app à la taille de cet appareil, qui croit tourner dessus | En local |
+| `today` | Date `AAAA-MM-JJ` | Simule la date du jour | **Partout, site en ligne compris** |
+| `reset` | `1` | Vide le profil de test à l'ouverture, puis disparaît de l'adresse | En local, avec `profil` |
+
+### `profil` : le nom n'est qu'une étiquette
+
+- **Il ne choisit pas le plan** : `?profil=sprint` ne crée pas un plan sprint. Un nouveau nom démarre toujours vide, sur l'écran « Ta course », et c'est là que tu choisis la course.
+- **Un nom non valide est ignoré sans prévenir** : un accent, une espace ou plus de 24 caractères ouvrent **ton vrai plan**. Vérifie la présence du bandeau orange « PROFIL TEST ».
+- **Exemples valides** : `sprint`, `embrun`, `test-2`, `nouveau_user`.
+- **Sans `profil`** : c'est ton vrai plan.
+
+### `appareil` : les 12 valeurs
+
+| Valeur | Appareil | Taille | Page d'installation |
+|---|---|---|---|
+| `iphone-safari` | iPhone, Safari | 390 × 844 | Les 3 gestes |
+| `iphone-chrome` | iPhone, Chrome | 390 × 844 | Les 3 gestes |
+| `iphone-installee` | iPhone, app installée | 390 × 844 | Ouvre directement l'app |
+| `ipad-safari` | iPad, Safari | 820 × 1180 | Les 3 gestes |
+| `android-chrome` | Android, Chrome | 412 × 915 | Bouton « Installer l'app » |
+| `android-samsung` | Android, Samsung Internet | 412 × 915 | Les 2 gestes |
+| `android-firefox` | Android, Firefox | 412 × 915 | Les 2 gestes |
+| `instagram-iphone` | Dans Instagram, iPhone | 390 × 844 | Passer au navigateur |
+| `facebook-android` | Dans Facebook, Android | 412 × 915 | Passer au navigateur |
+| `ordi-chrome` | Ordinateur, Chrome | 1280 × 800 | Bouton « Installer l'app » |
+| `ordi-safari` | Mac, Safari | 1440 × 900 | QR code |
+| `ordi-firefox` | Ordinateur, Firefox | 1280 × 800 | QR code |
+
+Une valeur inconnue est ignorée : la page s'affiche normalement.
+
+### Pages (`#…`)
+
+| Valeur | Page |
+|---|---|
+| `#dash` | Accueil |
+| `#week` | Semaine |
+| `#plan` | Vue d'ensemble du plan |
+| `#data` | Données |
+| `#race` | Course |
+| `#more` | Plus |
+| `#admin` | Suivi de l'app (réservé au propriétaire) |
+
+Options, à la suite de la page :
+
+| Option | Valeurs | Effet |
+|---|---|---|
+| `w` | Numéro de semaine, de 1 au nombre de semaines du plan | Avec `#week` : ouvre cette semaine |
+| `d` | De `0` (lundi) à `6` (dimanche) | Avec `#week` : va à ce jour |
+| `s` | Une fenêtre de la liste ci-dessous | Ouvre cette fenêtre, sur n'importe quelle page |
+
+Fenêtres (`s`) :
+
+| Valeur | Fenêtre |
+|---|---|
+| `settings` | Réglages |
+| `legal` | Mentions légales |
+| `away` | Absences et vacances |
+| `acts` | Toutes les activités |
+| `level` | Questionnaire de niveau |
+| `steps` | Courses intermédiaires |
+| `act:ID` | Détail d'une activité |
+| `assoc:ID` | Associer une activité à une séance |
+| `link:ID` | Associer une séance à une activité |
+
+### Adresses
+
+| Adresse | Résultat |
+|---|---|
+| `http://localhost:8080/` | Ton vrai plan |
+| `http://localhost:8080/?profil=embrun#dash` | L'app, avec le profil de test `embrun` |
+| `http://localhost:8080/dev.html` | Le mode test complet |
+| `http://localhost:8080/installer.html?appareil=iphone-safari` | La page d'installation, vue sur iPhone |
+| `http://localhost:8080/installer` | La page d'installation avec `npx serve`. Avec un autre serveur local, utilise `installer.html`. |
+
+Ces adresses ne marchent que si le serveur local tourne (`npx serve -l 8080 .`). Sinon, le navigateur n'affiche rien.
+
+`www.localhost.com` n'est **pas** ton ordinateur : écris toujours `localhost`, sans `www` ni `.com`.
+
+Écris `/installer` sans `/` à la fin : avec `/installer/`, la page cherche ses images et ses fichiers au mauvais endroit.
+
+### Exemples
+
+À ajouter après `http://localhost:8080/`. Les dates sont à adapter à la course du profil.
+
+```
+Nouvel utilisateur, de zéro :       ?profil=nouveau&reset=1
+Nouvel utilisateur sur iPhone :     ?profil=nouveau&reset=1&appareil=iphone-safari
+Plan avant son début :              ?profil=embrun&today=2026-11-15#plan
+Semaine 12, jeudi, sur Android :    ?profil=embrun&appareil=android-chrome#week?w=12&d=3
+Veille de course :                  ?profil=embrun&today=2027-06-26#week
+Réglages ouverts, sur ordinateur :  ?profil=embrun&appareil=ordi-chrome#dash?s=settings
+```
+
+## Changer d'écran depuis un profil de test
+
+Dans le bandeau orange de `http://localhost:8080/?profil=sprint#dash`, la liste **Cet écran** propose tous les appareils. Choisis-en un : l'app s'affiche à sa taille, et l'adresse le garde.
+
+```
+http://localhost:8080/?profil=sprint&appareil=iphone-safari#dash
+http://localhost:8080/?profil=sprint&appareil=ordi-chrome&today=2027-03-01#plan
+```
+
+La liste reste au-dessus de l'aperçu. **Cet écran** y revient à l'affichage normal.
+
+## Le mode test
+
+`dev.html` regroupe les mêmes réglages sur une seule page, avec ce guide.
+
+| Réglage | À quoi ça sert |
+|---|---|
+| Appareil et navigateur | L'écran prend la taille de l'appareil, et la page croit tourner dessus. |
+| Page | La page d'installation ou l'un des écrans de l'app. |
+| Profil de test | Un nom égale un utilisateur séparé. Ton vrai plan n'est jamais touché. |
+| Date simulée | Voir le plan avant le début, en pleine semaine ou après la course. **Réel** revient à la date du jour. |
+| Vider le profil | Repart de zéro, comme un nouvel utilisateur. Ne vide que le profil de test choisi. |
+| Ouvrir dans un onglet | Pour utiliser les DevTools sur la page seule. |
+
+### Ce que chaque appareil montre
+
+| Appareil | Page d'installation |
+|---|---|
+| iPhone (Safari, Chrome), iPad | Les 3 gestes : Partager, Sur l'écran d'accueil, Ajouter |
+| iPhone · App installée | Ouvre directement l'app |
+| Android · Chrome | Le bouton « Installer l'app » |
+| Android · Samsung Internet, Firefox | Les 2 gestes dans le menu du navigateur |
+| Dans une appli (Instagram, Facebook) | Le message pour passer au navigateur, et « Copier le lien » |
+| Ordinateur · Chrome | Le bouton « Installer l'app » |
+| Ordinateur · Safari, Firefox | Le QR code |
+
+Pour ajouter un appareil : une ligne dans `dev-appareil.js`. Il apparaît tout seul dans le mode test.
+
+### Ce que le mode test ne remplace pas
+
+Il simule ce que la page **détecte**, mais le moteur reste celui de ton navigateur : l'aperçu « iPhone · Safari » tourne en réalité dans ton Chrome.
+
+- **Il détecte bien** : les textes et les parcours selon l'appareil, et la mise en page à cette taille d'écran.
+- **Il ne détecte pas** : les défauts d'affichage propres à Safari, le comportement du tactile, ni la vraie installation (le bouton « Installer l'app » fait semblant, sans rien installer).
+- **Avant de partager largement** : essaie la vraie installation sur un vrai iPhone et un vrai Android, depuis le site en ligne.
+
+Pour l'adresse `http://192.168.x.x:8080` depuis un téléphone sur le même wifi, `?profil=` et `?appareil=` sont ignorés (ils ne marchent que sur `localhost`) : l'app s'ouvre comme pour un vrai utilisateur.
+
+### Garde-fous du mode test
+- `dev.html` et `dev-appareil.js` ne sont pas publiés sur Vercel (`.vercelignore`), et refusent de fonctionner hors local.
+- Sur le site en ligne, `?appareil=` est ignoré : `dev-appareil.js` n'est même pas chargé.
+
+## 1. Les profils de test (`?profil=`)
+
+C'est ce que le mode test utilise. Tu peux aussi l'écrire toi-même dans l'adresse locale, sans passer par `dev.html`.
+
+L'app demande une connexion Google et enregistre le plan à deux endroits : dans le navigateur (`localStorage`) et dans ton compte (serveur). Résultat : sans profil de test, on retombe toujours sur son propre plan.
 
 Ajoute `?profil=un-nom` à l'adresse locale :
 

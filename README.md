@@ -64,10 +64,11 @@ Fenêtres (`s=`) : `settings`, `legal`, `away`, `acts`, `act:ID`, `assoc:ID`, `l
 
 ## Déploiement
 - **App** : fichiers statiques sur Vercel (https://ironmanproject.vercel.app). Publier `index.html`, `races.js`, `sw.js`, `manifest.webmanifest` et les icônes.
+- **Page d'installation** : https://ironmanproject.vercel.app/installer (`installer.html`, adresse courte dans `vercel.json`). C'est le lien à partager. `installer-qr.svg` contient cette adresse en dur : à régénérer si le domaine change.
 - **Serveur** : `cd strava-worker && npx wrangler deploy`.
 
 ## Documentation
-- [DEV.md](DEV.md) : tester en local, profils de test, second compte.
+- [DEV.md](DEV.md) : tester en local, mode test (http://localhost:8080/dev.html), appareils simulés, profils de test, second compte.
 - [CATALOGUE.md](CATALOGUE.md) : mise à jour automatique du catalogue de courses.
 - [SETUP-COMPTES.md](SETUP-COMPTES.md) : activer la connexion Google.
 - [SETUP-GARMIN.md](SETUP-GARMIN.md) : synchroniser Garmin via intervals.icu.

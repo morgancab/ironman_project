@@ -15,6 +15,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<script>if(/[?&](appareil|profil)=/.test(location.search)&&(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||location.protocol==='file:'))document.write('<script src="dev-appareil.js"><\/script>');</script>
 <style>
 :root{
   --bg:#000;--card:#1c1c1e;--card2:#2c2c2e;--sep:rgba(84,84,88,.5);
@@ -4542,6 +4543,7 @@ if(DEV){
     if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});
   }catch(e){}
   var db=document.createElement('div');
+  db.id='devbar';
   db.textContent='PROFIL TEST · '+DEV;
   db.setAttribute('style','position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99999;padding:2px 10px;border-radius:0 0 8px 8px;background:#ff9f0a;color:#000;font:700 10px/1.5 system-ui,sans-serif;letter-spacing:.06em;pointer-events:none');
   document.body.appendChild(db);

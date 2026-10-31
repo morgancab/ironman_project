@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<title>Mode test · Plan triathlon</title>
+<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<style>
+:root{--card:#1c1c1e;--card2:#2c2c2e;--sep:rgba(84,84,88,.5);--t1:#f5f4ef;--t2:#a9a8a0;--warn:#ff9f0a;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:#000;color:var(--t1);font:14.5px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.bar{display:flex;align-items:center;gap:14px;height:56px;padding:0 18px;border-bottom:.5px solid var(--sep)}
+.bar img{width:28px;height:28px;border-radius:7px}
+.bar b{font-size:16px;font-weight:700}
+.badge{padding:2px 8px;border-radius:99px;background:var(--warn);color:#000;font-size:11px;font-weight:700}
+.tabs{display:flex;gap:4px;margin-left:auto;padding:3px;border-radius:11px;background:var(--card)}
+.tabs button{min-height:32px;padding:0 14px;border:0;border-radius:8px;background:none;color:var(--t2);font-weight:600}
+.tabs button[aria-selected=true]{background:var(--card2);color:var(--t1)}
+.sim{display:flex;height:calc(100% - 56px)}
+aside{flex:none;width:312px;padding:18px;overflow-y:auto;border-right:.5px solid var(--sep)}
+.lab{display:block;margin:20px 0 7px;color:var(--t2);font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.lab:first-child{margin-top:0}
+.grp{margin:10px 0 5px;color:var(--t2);font-size:12.5px}
+.grp:first-of-type{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{min-height:32px;padding:0 11px;border:0;border-radius:9px;background:var(--card);font-size:13.5px}
+.chips button[aria-pressed=true]{background:var(--t1);color:#000;font-weight:600}
+input,select{width:100%;height:40px;padding:0 11px;border:0;border-radius:10px;background:var(--card)}
+.line{display:flex;gap:6px}
+.line button{flex:none}
+.btn{min-height:40px;padding:0 12px;border:0;border-radius:10px;background:var(--card);font-weight:600}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:22px}
+.acts .wide{grid-column:1/3}
+.help{margin:6px 0 0;color:var(--t2);font-size:12.5px}
+.stage{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;overflow:hidden;background:#0b0b0c}
+.info{flex:none;color:var(--t2);font-size:13px;font-variant-numeric:tabular-nums}
+.box{flex:none;position:relative;overflow:hidden;border-radius:30px;box-shadow:0 0 0 6px #2a2a2c}
+.box.ordi{border-radius:10px;box-shadow:0 0 0 3px #2a2a2c}
+iframe{position:absolute;left:0;top:0;border:0;background:#000;transform-origin:0 0}
+.guide{height:calc(100% - 56px);overflow-y:auto;padding:24px 20px 60px}
+.doc{max-width:760px;margin:0 auto}
+.doc h1{margin:0 0 14px;font-size:28px;letter-spacing:-.02em;line-height:1.15}
+.doc h2{margin:32px 0 10px;font-size:20px;letter-spacing:-.01em}
+.doc h3{margin:22px 0 8px;font-size:16px}
+.doc p,.doc ul,.doc ol{margin:0 0 12px}
+.doc li{margin:4px 0}
+.doc a{color:var(--t1)}
+.doc code{padding:1px 5px;border-radius:5px;background:var(--card2);font:13px ui-monospace,Consolas,Menlo,monospace}
+.doc pre{margin:0 0 12px;padding:12px 14px;overflow-x:auto;border-radius:10px;background:var(--card)}
+.doc pre code{padding:0;background:none}
+.doc table{width:100%;margin:0 0 14px;border-collapse:collapse}
+.doc th,.doc td{padding:8px 10px;border-bottom:.5px solid var(--sep);text-align:left;vertical-align:top}
+.doc th{color:var(--t2);font-size:12.5px;font-weight:600}
+@media (max-width:820px){.sim{flex-direction:column;height:auto}aside{width:auto;border-right:0}.stage{height:760px}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <img src="icon-192.png" alt="">
+  <b>Mode test</b><span class="badge">Local</span>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="t-sim" data-tab="sim" aria-selected="true">Simulateur</button>
+    <button role="tab" id="t-guide" data-tab="guide" aria-selected="false">Guide</button>
+  </div>
+</header>
+
+<div class="sim" id="sim">
+  <aside>
+    <span class="lab">Appareil et navigateur</span>
+    <div id="devs"></div>
+
+    <label class="lab" for="page">Page</label>
+    <select id="page">
+      <option value="installer">Page d’installation</option>
+      <option value="#dash">Accueil</option>
+      <option value="#week">Semaine</option>
+      <option value="#plan">Vue d’ensemble du plan</option>
+      <option value="#data">Données</option>
+      <option value="#race">Course</option>
+      <option value="#more">Plus</option>
+    </select>
+
+    <label class="lab" for="profil">Profil de test</label>
+    <input id="profil" maxlength="24" spellcheck="false" autocomplete="off">
+    <p class="help">Chaque nom est un utilisateur séparé. Ton vrai plan n’est jamais touché.</p>
+
+    <label class="lab" for="today">Date simulée</label>
+    <div class="line"><input id="today" type="date"><button class="btn" id="now">Réel</button></div>
+
+    <div class="acts">
+      <button class="btn" id="reload">Recharger</button>
+      <button class="btn" id="reset">Vider le profil</button>
+      <button class="btn wide" id="open">Ouvrir dans un onglet</button>
+    </div>
+  </aside>
+  <main class="stage" id="stage">
+    <div class="info" id="info"></div>
+    <div class="box" id="box"><iframe id="frame" title="Aperçu de l’app"></iframe></div>
+  </main>
+</div>
+
+<div class="guide" id="guide" hidden><article class="doc" id="doc"></article></div>
+
+<script src="dev-appareil.js"></script>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)&&location.protocol!=='file:'){
+    document.body.innerHTML='<p style="padding:24px">Le mode test ne fonctionne qu’en local.</p>';return;
+  }
+  var A=window.DEV_APPAREILS,KEY='plan-tri:mode-test',S={dev:'iphone-safari',page:'installer',profil:'test',today:''};
+  try{var o=JSON.parse(localStorage.getItem(KEY));if(o)for(var k in S)if(o[k]!=null)S[k]=o[k];}catch(x){}
+  var qd=/[?&]appareil=([\w-]+)/.exec(location.search);if(qd)S.dev=qd[1];
+  if(!A[S.dev])S.dev='iphone-safari';
+  var INST='installer.html';
+
+  function url(reset){
+    var q='?appareil='+S.dev+'&profil='+encodeURIComponent(S.profil||'test')+(S.today?'&today='+S.today:'')+(reset?'&reset=1':'');
+    return S.page==='installer'?INST+q:'./'+q+S.page;
+  }
+  function fit(){
+    var a=A[S.dev],st=$('stage'),s=Math.min(1,(st.clientWidth-40)/a.w,(st.clientHeight-72)/a.h),b=$('box'),f=$('frame');
+    b.className='box'+(a.w>1000?' ordi':'');
+    b.style.width=Math.round(a.w*s)+'px';b.style.height=Math.round(a.h*s)+'px';
+    f.style.width=a.w+'px';f.style.height=a.h+'px';f.style.transform='scale('+s+')';
+    $('info').textContent=a.groupe+' · '+a.nom+' · '+a.w+' × '+a.h+' · '+Math.round(s*100)+' %';
+  }
+  function go(reset){
+    localStorage.setItem(KEY,JSON.stringify(S));
+    [].forEach.call(document.querySelectorAll('#devs button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.dev===S.dev));});
+    fit();
+    $('frame').src=url(reset);
+  }
+
+  // Liste des appareils, regroupés dans l'ordre du fichier dev-appareil.js
+  var h='',g='';
+  Object.keys(A).forEach(function(id){
+    if(A[id].groupe!==g){h+=(g?'</div>':'')+'<div class="grp">'+A[id].groupe+'</div><div class="chips">';g=A[id].groupe;}
+    h+='<button data-dev="'+id+'" aria-pressed="false">'+A[id].nom+'</button>';
+  });
+  $('devs').innerHTML=h+'</div>';
+  $('devs').addEventListener('click',function(e){var d=e.target.dataset&&e.target.dataset.dev;if(d){S.dev=d;go();}});
+
+  $('page').value=S.page;$('profil').value=S.profil;$('today').value=S.today;
+  $('page').addEventListener('change',function(){S.page=this.value;go();});
+  $('profil').addEventListener('change',function(){S.profil=this.value.replace(/[^\w-]/g,'')||'test';this.value=S.profil;go();});
+  $('today').addEventListener('change',function(){S.today=this.value;go();});
+  $('now').addEventListener('click',function(){S.today='';$('today').value='';go();});
+  $('reload').addEventListener('click',function(){go();try{$('frame').contentWindow.location.reload();}catch(x){}});
+  $('reset').addEventListener('click',function(){go(true);});
+  $('open').addEventListener('click',function(){window.open(url(),'_blank');});
+  window.addEventListener('resize',fit);
+
+  // Guide : DEV.md affiché tel quel, pour n'avoir qu'une seule documentation à tenir à jour
+  function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function inl(t){
+    return esc(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+  function md(src){
+    var L=src.replace(/\r/g,'').split('\n'),o='',i=0,m;
+    while(i<L.length){
+      var l=L[i];
+      if(/^```/.test(l)){var c=[];for(i++;i<L.length&&!/^```/.test(L[i]);i++)c.push(L[i]);i++;o+='<pre><code>'+esc(c.join('\n'))+'</code></pre>';continue;}
+      if((m=/^(#{1,3}) (.*)/.exec(l))){o+='<h'+m[1].length+'>'+inl(m[2])+'</h'+m[1].length+'>';i++;continue;}
+      if(/^\|/.test(l)){
+        var r=[];for(;i<L.length&&/^\|/.test(L[i]);i++)r.push(L[i]);
+        var cells=function(x){return x.replace(/^\||\|$/g,'').split('|').map(function(y){return inl(y.trim());});};
+        o+='<table><thead><tr><th>'+cells(r[0]).join('</th><th>')+'</th></tr></thead><tbody>'+r.slice(2).map(function(x){return '<tr><td>'+cells(x).join('</td><td>')+'</td></tr>';}).join('')+'</tbody></table>';
+        continue;
+      }
+      if((m=/^(-|\d+\.) /.exec(l))){
+        var tag=m[1]==='-'?'ul':'ol',it=[];for(;i<L.length&&/^(-|\d+\.) /.test(L[i]);i++)it.push(L[i].replace(/^(-|\d+\.) /,''));
+        o+='<'+tag+'><li>'+it.map(inl).join('</li><li>')+'</li></'+tag+'>';continue;
+      }
+      if(!l.trim()){i++;continue;}
+      var p=[];for(;i<L.length&&L[i].trim()&&!/^(#{1,3} |```|\||- |\d+\. )/.test(L[i]);i++)p.push(L[i]);
+      o+='<p>'+inl(p.join(' '))+'</p>';
+    }
+    return o;
+  }
+  var loaded=false;
+  function guide(){
+    if(loaded)return;loaded=true;
+    fetch('DEV.md',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.text();})
+      .then(function(t){$('doc').innerHTML=md(t);})
+      .catch(function(){loaded=false;$('doc').innerHTML='<p>Le guide s’affiche quand le projet est servi en local (<code>npx serve -l 8080 .</code>). Sinon, ouvre le fichier <code>DEV.md</code>.</p>';});
+  }
+  function tab(n){
+    $('sim').hidden=n!=='sim';$('guide').hidden=n!=='guide';
+    $('t-sim').setAttribute('aria-selected',String(n==='sim'));$('t-guide').setAttribute('aria-selected',String(n==='guide'));
+    if(n==='guide')guide();else fit();
+    history.replaceState(null,'',n==='guide'?'#guide':location.pathname);
+  }
+  document.querySelector('.tabs').addEventListener('click',function(e){var n=e.target.dataset&&e.target.dataset.tab;if(n)tab(n);});
+
+  tab(location.hash==='#guide'?'guide':'sim');
+  // « npx serve » redirige installer.html vers /installer en perdant les paramètres : on vise directement l'adresse finale.
+  fetch(INST,{method:'HEAD'}).then(function(r){if(r.redirected)INST=new URL(r.url).pathname.replace(/^\//,'');}).catch(function(){}).then(function(){go();});
+})();
+</script>
+</body>
+</html>

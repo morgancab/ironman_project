@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Plan tri">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Installe Plan triathlon sur ton téléphone : un plan d’entraînement sur mesure, gratuit, pour préparer ta course.">
+<meta property="og:title" content="Plan triathlon : installe l’app">
+<meta property="og:description" content="Un plan d’entraînement triathlon sur mesure, gratuit, de la première séance au jour J.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ironmanproject.vercel.app/installer">
+<meta property="og:image" content="https://ironmanproject.vercel.app/icon-512.png">
+<title>Installer Plan triathlon</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<script>if(/[?&](appareil|profil)=/.test(location.search)&&(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||location.protocol==='file:'))document.write('<script src="dev-appareil.js"><\/script>');</script>
+<style>
+:root{--card:#1c1c1e;--card2:#2c2c2e;--sep:rgba(84,84,88,.5);--t1:#f5f4ef;--t2:#a9a8a0;--good:#0ca30c;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:#000;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:#000;color:var(--t1);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:440px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 44px) 20px calc(env(safe-area-inset-bottom,0px) + 32px)}
+[hidden]{display:none!important}
+.hero{text-align:center}
+.hero img{display:block;width:88px;height:88px;margin:0 auto 18px;border-radius:21px}
+h1{margin:0;font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.hero p{margin:10px auto 0;max-width:330px;font-size:17px;color:var(--t2)}
+.box{margin-top:28px;padding:20px;border-radius:20px;background:var(--card)}
+h2{margin:0 0 14px;font-size:18px;font-weight:700;letter-spacing:-.01em}
+.btn{display:block;width:100%;min-height:52px;padding:14px 16px;border:0;border-radius:14px;background:var(--t1);color:#000;font:inherit;font-size:17px;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.btn.sec{background:var(--card2);color:var(--t1);font-weight:600}
+.hint{margin:12px 0 0;font-size:14px;color:var(--t2)}
+ol{margin:0;padding:0;list-style:none;counter-reset:s}
+ol li{position:relative;min-height:28px;padding:3px 0 0 40px;counter-increment:s}
+ol li+li{margin-top:16px}
+ol li:before{content:counter(s);position:absolute;left:0;top:0;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--card2);font-size:14px;font-weight:700}
+ol small{display:block;margin-top:2px;font-size:13.5px;color:var(--t2)}
+.ic{display:inline-block;width:19px;height:19px;margin:0 2px;vertical-align:-4px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.note{margin:16px 0 0;padding-top:14px;border-top:.5px solid var(--sep);font-size:13.5px;color:var(--t2)}
+.qr{display:block;width:196px;height:196px;margin:0 auto 14px;padding:10px;border-radius:14px;background:#fff}
+.center{text-align:center}
+.ok{display:grid;place-items:center;width:44px;height:44px;margin:0 auto 12px;border-radius:50%;background:var(--good);color:#fff}
+.pts{margin:28px 0 0;padding:0;list-style:none}
+.pts li{padding:14px 2px;border-top:.5px solid var(--sep)}
+.pts li:first-child{border-top:0}
+.pts b{display:block;font-weight:600}
+.pts span{display:block;margin-top:2px;font-size:14.5px;color:var(--t2)}
+.foot{margin:18px 0 0;text-align:center;font-size:14.5px}
+.foot a{color:var(--t1);text-underline-offset:3px}
+.foot small{display:block;margin-top:10px;font-size:13px;color:var(--t2)}
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <img src="icon-192.png" alt="" width="88" height="88">
+    <h1>Plan triathlon</h1>
+    <p>Ton plan d’entraînement sur mesure, de la première séance au jour J.</p>
+  </header>
+
+  <section class="box" id="p-prompt" hidden>
+    <button class="btn" id="install">Installer l’app</button>
+    <p class="hint center">Gratuit, sans passer par un store. L’icône s’ajoute à ton appareil en quelques secondes.</p>
+  </section>
+
+  <section class="box" id="p-ios" hidden>
+    <h2>Installe-la en 3 gestes</h2>
+    <ol>
+      <li>Touche le bouton <b>Partager</b>
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="m8 7 4-4 4 4"/><path d="M8 11H6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2"/></svg>
+        <small>Dans la barre de ton navigateur. Il peut se cacher derrière le bouton « ••• ».</small></li>
+      <li>Choisis <b>Sur l’écran d’accueil</b>
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+        <small>Fais défiler la liste ou touche « Plus » si tu ne le vois pas.</small></li>
+      <li>Touche <b>Ajouter</b>
+        <small>Ouvre ensuite <b>Plan tri</b> depuis ton écran d’accueil.</small></li>
+    </ol>
+    <p class="note">Installe l’app avant de créer ton plan : sur iPhone, ce que tu saisis dans le navigateur ne passe pas dans l’app installée.</p>
+  </section>
+
+  <section class="box" id="p-android" hidden>
+    <h2>Installe-la en 2 gestes</h2>
+    <ol>
+      <li>Ouvre le menu <b>⋮</b> de ton navigateur
+        <small>En haut à droite dans Chrome.</small></li>
+      <li>Choisis <b>Installer l’application</b>
+        <small>Ou « Ajouter à l’écran d’accueil », selon ton téléphone.</small></li>
+    </ol>
+  </section>
+
+  <section class="box" id="p-inapp" hidden>
+    <h2>Ouvre d’abord ton navigateur</h2>
+    <p class="hint" style="margin:0 0 16px">Ce lien s’est ouvert dans une autre application, depuis laquelle on ne peut pas installer. Copie-le, puis colle-le dans <span id="inapp-br">ton navigateur</span>.</p>
+    <button class="btn" id="copy">Copier le lien</button>
+  </section>
+
+  <section class="box center" id="p-desktop" hidden>
+    <h2>Scanne ce code avec ton téléphone</h2>
+    <img class="qr" src="installer-qr.svg" alt="QR code vers la page d’installation" width="196" height="196">
+    <p class="hint" style="margin:0">L’app est pensée pour le téléphone : c’est là qu’elle t’accompagne à l’entraînement.</p>
+  </section>
+
+  <section class="box center" id="p-done" hidden>
+    <div class="ok"><svg class="ic" style="margin:0" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></div>
+    <h2 style="margin-bottom:6px">C’est installé</h2>
+    <p class="hint" style="margin:0">Retrouve <b>Plan triathlon</b> parmi tes applications.</p>
+  </section>
+
+  <noscript><section class="box"><a class="btn" href="./">Ouvrir l’app</a></section></noscript>
+
+  <ul class="pts">
+    <li><b>Un plan fait pour ta course</b><span>Choisis ta course et ta date : le plan se construit jour par jour, à ton niveau.</span></li>
+    <li><b>Toutes les distances</b><span>Du sprint à l’Ironman, avec tes courses de préparation prises en compte.</span></li>
+    <li><b>Tes séances cochées toutes seules</b><span>Si tu le souhaites, connecte Garmin pour suivre ce que tu as vraiment fait.</span></li>
+    <li><b>Disponible partout</b><span>L’app s’ouvre en plein écran et reste accessible sans connexion.</span></li>
+  </ul>
+
+  <p class="foot"><a id="open" href="./">Utiliser dans le navigateur</a><small>Gratuit · Sans publicité · iPhone, Android et ordinateur</small></p>
+</main>
+<script>
+(function(){
+  // Déjà lancée depuis l'écran d'accueil : on va droit à l'app.
+  if(navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)){location.replace('./'+location.search);return;}
+  var ua=navigator.userAgent;
+  var ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var android=/Android/.test(ua);
+  var inapp=/FBAN|FBAV|FB_IAB|Instagram|Messenger|Snapchat|TikTok|musical_ly|LinkedInApp|Twitter|MicroMessenger|GSA\/|Line\//.test(ua)||(android&&/; wv\)/.test(ua));
+  var deferred=null;
+  function $(id){return document.getElementById(id);}
+  function show(id){['p-prompt','p-ios','p-android','p-inapp','p-desktop','p-done'].forEach(function(p){$(p).hidden=p!==id;});}
+  var base=inapp?'p-inapp':ios?'p-ios':android?'p-android':'p-desktop';
+  if(inapp)$('inapp-br').textContent=ios?'Safari':'Chrome';
+  show(base);
+
+  // Chrome et Edge proposent l'installation directe : un seul bouton suffit.
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();deferred=e;
+    if(!inapp)show('p-prompt');
+  });
+  window.addEventListener('appinstalled',function(){deferred=null;show('p-done');});
+  $('install').addEventListener('click',function(){
+    if(!deferred)return;
+    var d=deferred;deferred=null;
+    d.prompt();
+    d.userChoice.then(function(r){if(r.outcome==='accepted')show('p-done');else{deferred=d;}}).catch(function(){});
+  });
+
+  $('copy').addEventListener('click',function(){
+    var b=this,url=location.origin+location.pathname;
+    function done(){b.textContent='Lien copié';setTimeout(function(){b.textContent='Copier le lien';},2000);}
+    function legacy(){var t=document.createElement('textarea');t.value=url;document.body.appendChild(t);t.select();try{document.execCommand('copy');done();}catch(x){b.textContent=url;}t.remove();}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(done,legacy);else legacy();
+  });
+})();
+</script>
+</body>
+</html>
