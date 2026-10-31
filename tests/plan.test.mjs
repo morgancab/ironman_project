@@ -3,10 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadApp, raceConfig, sessions, textOf, addDays } from './harness.mjs';
 
-const REF_SABLES = '345,390,440,315,470,525,575,370,590,635,675,420,695,740,785,460,805,850,880,495,885,935,695,415,175';   // minutes par semaine du plan d'origine : à changer seulement si le plan est revu volontairement
+const REF_SABLES = '345,390,440,315,470,525,575,370,590,635,675,420,695,740,785,460,805,850,880,495,880,925,690,415,175';   // minutes par semaine du plan d'origine : à changer seulement si le plan est revu volontairement
 const FORMATS = ['sprint', 'olympic', 'half', 'full', 'custom'];
 const WEEKS = Array.from({ length: 49 }, (_, i) => i + 4);
-const CAP = { sprint: [120, 70], olympic: [150, 90], half: [240, 130] };   // CAPS de index.html : [vélo long, sortie longue]
+const CAP = { sprint: [90, 60], olympic: [150, 80], half: [240, 120] };   // CAPS de index.html : [vélo long, sortie longue]
 
 function eachPlan(fn) {
   for (const format of FORMATS) for (const weeks of WEEKS) {
@@ -78,6 +78,16 @@ test('phases et blocs couvrent tout le plan, sans trou', () => {
     assert.equal(IM.KINDS.length, n);
     assert.equal(IM.KINDS[n - 1], 'race');
   });
+});
+
+test('la vue d’ensemble donne accès à chaque semaine en un appui', () => {
+  for (const weeks of [4, 25, 52]) {
+    const race = raceConfig({ format: 'full', weeks }), h = loadApp({ race, today: addDays(race.start, 10), hash: '#plan' }).view();
+    const tiles = [...h.matchAll(/class="wkt[^"]*" data-act="gowk" data-w="(\d+)"/g)].map((m) => +m[1]);
+    assert.equal(tiles.join(), Array.from({ length: weeks }, (_, n) => n + 1).join());
+    assert.equal((h.match(/class="wkt cur/g) || []).length, 1);
+    assert.ok(!/undefined|NaN/.test(h), 'valeur cassée');
+  }
 });
 
 test('charge : affûtage plus léger que le pic, sorties longues plafonnées', () => {
